@@ -15,7 +15,6 @@ players.prepare("alter table players add ratingage real default 0;").run()
 players.prepare("alter table players add ratingbase int default 0;").run()
 players.prepare("alter table players add unrated int default 0;").run()
 players.prepare("alter table players add isbot int default 0;").run()
-
 players.prepare("alter table players add fatigue text default '{}';").run()
 
 
@@ -26,7 +25,6 @@ games.prepare("alter table games add tournament int default 0;").run()
 games.prepare("alter table games add komi int default 0;").run()
 games.prepare("alter table games add pieces int default -1;").run()
 games.prepare("alter table games add capstones int default -1;").run()
-
 games.prepare("alter table games add rating_change_white int default 0;").run()
 games.prepare("alter table games add rating_change_black int default 0;").run()
 

@@ -5,25 +5,62 @@
 Server to handle online TAK games
 
 ## Requirements
-Java 11
-Maven
-sqlite
+- Java 11
+- Maven
+- sqlite
 
 ## Getting Started
 Pull the source by cloning the repository, then cd in to the project
 ```
-git clone git@github.com:USTakAssociation/playtak.git
-cd playtak
+git clone git@github.com:USTakAssociation/tak-server.git
+cd tak-server
 ```
 
-Run the following commands
+to run locally run the following commands:
+Get the dependencies
 ```
-mvn
+mvn dependency:resolve  
+```
+```
+mvn compile
+```
+```
+mvn package
 ```
 
-Create the databases and move them into the target folder
-copy the settings
+Create the sqlite databases
+```
+echo "CREATE TABLE players (id INT PRIMARY_KEY, name VARCHAR(20), password VARCHAR(50), email VARCHAR(50), r4 INT, r5 INT,r6 INT, r7 INT,r8 INT, rating real default 1000, boost real default 750, ratedgames int default 0, maxrating real default 1000, ratingage real default 0, ratingbase int default 0, unrated int default 0, isbot int default 0, fatigue text default '{}');" | sqlite3 target/players.db
+echo "CREATE TABLE games (id INTEGER PRIMARY KEY, date INT, size INT, player_white VARCHAR(20), player_black VARCHAR(20), notation TEXT, result VARCAR(10), timertime INT DEFAULT 0, timerinc INT DEFAULT 0, rating_white int default 1000, rating_black int default 1000, unrated int default 0, tournament int default 0, komi int default 0, pieces int default -1, capstones int default -1, rating_change_white int default 0, rating_change_black int default 0);" | sqlite3 target/games.db
+```
+copy the properties and message to the target
+```
+cp properties.xml ./target
+cp message ./target
+```
 
+## Server API
+
+Stand alone clients can connect directly to playtak.com at port on port 9999 for encrypted and port 10000 which will not be encrypted.
+<br>
+The defalut Web client runs on playtak.com port 80/443.
+<br>
+
+** You can telnet to playtak.com on port 10000 to test the commands.**
+
+Typical communication is like below
+* Connect to server via a websocket. Server gives welcome message
+* Server sends "Login or Register"
+* Client replies with login information or registers (If Client registers, password is sent to the mail and it can login with the password)
+* Server accepts name or asks for another name if the one provided is invalid or already taken
+* Server sends list of seeks with "Seek new" messages and games in progress with "GameList Add" messages
+* Client posts seek or accepts existing seek
+* If seek is accepted, server removes existing seeks for both the players (sends "Seek remove" for all) and starts game
+* Client sends moves, server validates moves and sends the move to other client. If invalid, server sends a "NOK" message.
+* Game progresses and ends either in a win/lose/draw or abandonment.
+
+
+### Client to Server Communication
 The input/output of server is all text.
 
 The client to server commands and their format is as below
@@ -67,6 +104,8 @@ Currently two protocol versions are supported, 0 and 1. The only difference bein
 
 The *Client*, *Login* and *Register* are the only three commands which work while not logged in.
 
+### Server to Client Communication
+
 The server to client messages and their format is as below.
 The list does not include error messages, you're free to poke around and figure out the error messages on your own or look at the code.
 
@@ -103,21 +142,3 @@ The list does not include error messages, you're free to poke around and figure 
 |Online **no** |**no** players are connected to server|
 |NOK |Indicates the command client send is invalid or unrecognized|
 |OK  |Indicates previous command is ok. Clients can ignore this. *I might remove this message altogether in future as it serves no real purpose*|
-
-##Info for Client developers
-Stand alone clients can connect directly to playtak.com at port 10000 (but this communication will not be encrypted)
-<br>
-The defalut Web client runs on playtak.com port 80/443.
-<br>
-**telnet to playtak.com on port 10000 to test the commands.**
-
-Typical communication is like below
-* Connect to server. Server gives welcome message
-* Server sends "Login or Register"
-* Client replies with login information or registers (If Client registers, password is sent to the mail and it can login with the password)
-* Server accepts name or asks for another name if the one provided is invalid or already taken
-* Server sends list of seeks with "Seek new" messages and games in progress with "GameList Add" messages
-* Client posts seek or accepts existing seek
-* If seek is accepted, server removes existing seeks for both the players (sends "Seek remove" for all) and starts game
-* Client sends moves, server validates moves and sends the move to other client. If invalid, server sends a "NOK" message.
-* Game progresses and ends either in a win/lose/draw or abandonment.
