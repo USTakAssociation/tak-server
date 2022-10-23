@@ -39,14 +39,18 @@ cp properties.xml ./target
 cp message ./target
 ```
 
+Finaly run the app
+```
+java -jar ./target/takserver-jar-with-dependencies.jar
+```
+
 ## Server API
 
-Stand alone clients can connect directly to playtak.com at port on port 9999 for encrypted and port 10000 which will not be encrypted.
+Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on port 9999 for encrypted and port 10000 which will not be encrypted.
 <br>
-The defalut Web client runs on playtak.com port 80/443.
-<br>
+You can find the playtak UI client github here [playtak-ui](https://github.com/USTakAssociation/playtak-ui)
 
-** You can telnet to playtak.com on port 10000 to test the commands.**
+** You can telnet on port 10000 to test the commands.**
 
 Typical communication is like below
 * Connect to server via a websocket. Server gives welcome message
