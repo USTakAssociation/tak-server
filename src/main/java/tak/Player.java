@@ -51,7 +51,6 @@ public class Player {
 	public boolean isbot=false;
 	public boolean is_admin = false;
 	public boolean is_mod = false;
-	private boolean mod = false;
 	private boolean gag = false;//don't broadcast his shouts
 	//variables not in database
 	public Client client;
@@ -206,7 +205,7 @@ public class Player {
 	}
 	
 	public void unMod() {
-		mod = false;
+		is_mod = false;
 		modList.remove(this);
 	}
 
