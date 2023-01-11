@@ -81,7 +81,7 @@ public class Player {
 	}
 	
 	Player(String name, String email, String password, int id, int r4, int r5,
-						int r6, int r7, int r8, boolean guest, boolean bot, boolean admin, boolean mod) {
+			int r6, int r7, int r8, boolean guest, boolean bot, boolean admin, boolean mod) {
 		this.name = name;
 		this.email = email;
 		this.password = password;

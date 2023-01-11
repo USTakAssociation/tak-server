@@ -12,9 +12,6 @@ import java.util.concurrent.locks.*;
  *
  * @author Nohat
  */
-
-
-
 public class Telnet extends Websocket{
 	//public Socket socket;
 	InputStream stream;
@@ -26,9 +23,6 @@ public class Telnet extends Websocket{
 	int readbufferoffset;
 	
 	Lock writelock;
-	
-	//public boolean headerended;
-	//public boolean streamended;
 	
 	Telnet(Socket socket){
 		this.socket = socket;
@@ -72,12 +66,6 @@ public class Telnet extends Websocket{
 						readbufferobj.put(readbuffer,readbufferoffset,readbufferused);
 						readbufferoffset=0;
 					}
-					/*
-					if(msg.equals("PING")){
-						send("OK");
-						return recieve(false);
-					}
-					*/
 					return msg;
 				}
 			}

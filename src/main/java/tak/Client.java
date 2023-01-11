@@ -86,11 +86,14 @@ public class Client extends Thread {
 	String resignString = "^Game#(\\d+) Resign";
 	Pattern resignPattern;
 
-	String seekString = "^Seek (\\d) (\\d+) (\\d+) ([WBA]) (\\d+) (\\d+) (\\d+) (0|1) (0|1) ([A-Za-z0-9_]*)";
-	Pattern seekPattern;
+	String seekV3String = "^Seek (\\d) (\\d+) (\\d+) ([WBA]) (\\d+) (\\d+) (\\d+) (0|1) (0|1) (\\d+) (\\d+) ([A-Za-z0-9_]*)";
+	Pattern seekV3Pattern;
 
-	String oldSeekString = "^Seek (\\d) (\\d+) (\\d+)( [WB])?";
-	Pattern oldSeekPattern;
+	String seekV2String = "^Seek (\\d) (\\d+) (\\d+) ([WBA]) (\\d+) (\\d+) (\\d+) (0|1) (0|1) ([A-Za-z0-9_]*)";
+	Pattern seekV2Pattern;
+
+	String seekV1String = "^Seek (\\d) (\\d+) (\\d+)( [WB])?";
+	Pattern seekV1Pattern;
 
 	String acceptSeekString = "^Accept (\\d+)";
 	Pattern acceptSeekPattern;
@@ -179,8 +182,9 @@ public class Client extends Thread {
 		removeDrawPattern = Pattern.compile(removeDrawString);
 		resignPattern = Pattern.compile(resignString);
 		wrongRegisterPattern = Pattern.compile(wrongRegisterString);
-		seekPattern = Pattern.compile(seekString);
-		oldSeekPattern = Pattern.compile(oldSeekString);
+		seekV3Pattern = Pattern.compile(seekV3String);
+		seekV2Pattern = Pattern.compile(seekV2String);
+		seekV1Pattern = Pattern.compile(seekV1String);
 		acceptSeekPattern = Pattern.compile(acceptSeekString);
 		listPattern = Pattern.compile(listString);
 		gameListPattern = Pattern.compile(gameListString);
@@ -501,7 +505,47 @@ public class Client extends Thread {
 
 					}
 					//Seek a game
-					else if (game==null && (m = seekPattern.matcher(temp)).find()) {
+					else if (game==null && (m = seekV3Pattern.matcher(temp)).find()) {
+						Seek.seekStuffLock.lock();
+						try{
+							if (seek != null) {
+								Seek.removeSeek(seek.no);
+							}
+							int no = Integer.parseInt(m.group(1));
+							if(no == 0) {
+								Log("Seek remove");
+								seek = null;
+							} else {
+								Seek.COLOR clr = Seek.COLOR.ANY;
+
+								if("W".equals(m.group(4)))
+									clr = Seek.COLOR.WHITE;
+								else if("B".equals(m.group(4)))
+									clr = Seek.COLOR.BLACK;
+								seek = Seek.newSeek(
+										this,
+										Integer.parseInt(m.group(1)),
+										Integer.parseInt(m.group(2)),
+										Integer.parseInt(m.group(3)),
+										clr,
+										Integer.parseInt(m.group(5)),
+										Integer.parseInt(m.group(6)),
+										Integer.parseInt(m.group(7)),
+										Integer.parseInt(m.group(8)),
+										Integer.parseInt(m.group(9)),
+										m.group(12),
+										Integer.parseInt(m.group(10)),
+										Integer.parseInt(m.group(11))
+								);
+								Log("Seek "+seek.boardSize);
+							}
+						}
+						finally{
+							Seek.seekStuffLock.unlock();
+						}
+					}
+					//Seek a game
+					else if (game==null && (m = seekV2Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
 							if (seek != null) {
@@ -519,17 +563,19 @@ public class Client extends Thread {
 								else if("B".equals(m.group(4)))
 									clr = Seek.COLOR.BLACK;
 								seek = Seek.newSeek(
-									this
-									,Integer.parseInt(m.group(1))
-									,Integer.parseInt(m.group(2))
-									,Integer.parseInt(m.group(3))
-									,clr
-									,Integer.parseInt(m.group(5))
-									,Integer.parseInt(m.group(6))
-									,Integer.parseInt(m.group(7))
-									,Integer.parseInt(m.group(8))
-									,Integer.parseInt(m.group(9))
-									,m.group(10)
+									this,
+									Integer.parseInt(m.group(1)),
+									Integer.parseInt(m.group(2)),
+									Integer.parseInt(m.group(3)),
+									clr,
+									Integer.parseInt(m.group(5)),
+									Integer.parseInt(m.group(6)),
+									Integer.parseInt(m.group(7)),
+									Integer.parseInt(m.group(8)),
+									Integer.parseInt(m.group(9)),
+									m.group(10),
+									0,
+									0
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -539,7 +585,7 @@ public class Client extends Thread {
 						}
 					}
 					//Seek a game
-					else if (game==null && (m = oldSeekPattern.matcher(temp)).find()) {
+					else if (game==null && (m = seekV1Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
 							if (seek != null) {
@@ -569,17 +615,19 @@ public class Client extends Thread {
 								}
 									
 								seek = Seek.newSeek(
-									this
-									,Integer.parseInt(m.group(1))
-									,Integer.parseInt(m.group(2))
-									,Integer.parseInt(m.group(3))
-									,clr
-									,0
-									,tilesCount
-									,capstonesCount
-									,0
-									,0
-									,""
+									this,
+									Integer.parseInt(m.group(1)),
+									Integer.parseInt(m.group(2)),
+									Integer.parseInt(m.group(3)),
+									clr,
+									0,
+									tilesCount,
+									capstonesCount,
+									0,
+									0,
+									"",
+									0,
+									0
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -605,8 +653,8 @@ public class Client extends Thread {
 								unspectateAll();
 								otherClient.unspectateAll();
 								
-								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament);
-								game.gamelock.lock();
+								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
+								game.gameLock.lock();
 								try{
 									Game.addGame(game);
 									
@@ -619,7 +667,7 @@ public class Client extends Thread {
 									otherClient.send(msg+" "+((game.white==otherClient.player)?"white":"black")+" "+msg2);
 								}
 								finally{
-									game.gamelock.unlock();
+									game.gameLock.unlock();
 								}
 							} else {
 								sendNOK();
@@ -631,7 +679,7 @@ public class Client extends Thread {
 					}
 					//Handle place move
 					else if (game != null && (m = placePattern.matcher(temp)).find() && game.no == Integer.parseInt(m.group(1))) {
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							Status st = game.placeMove(player, m.group(2).charAt(0), Integer.parseInt(m.group(3)), m.group(4) != null, m.group(5)!=null);
 							if(st.isOk()){
@@ -649,7 +697,7 @@ public class Client extends Thread {
 							}
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Handle move move
@@ -658,7 +706,7 @@ public class Client extends Thread {
 						int argsint[] = new int[args.length-1];
 						for(int i=1;i<args.length;i++)
 							argsint[i-1] = Integer.parseInt(args[i]);
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							Status st = game.moveMove(player, m.group(2).charAt(0), Integer.parseInt(m.group(3)), m.group(4).charAt(0), Integer.parseInt(m.group(5)), argsint);
 							if(st.isOk()){
@@ -676,7 +724,7 @@ public class Client extends Thread {
 							}
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Handle undo offer
@@ -691,7 +739,7 @@ public class Client extends Thread {
 					}
 					//Handle draw offer
 					else if (game!=null && (m = drawPattern.matcher(temp)).find() && game.no == Integer.parseInt(m.group(1))) {
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							game.draw(player);
 							Player otherPlayer = (game.white==player)?game.black:game.white;
@@ -704,7 +752,7 @@ public class Client extends Thread {
 							sendWithoutLogging("OK");
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Handle removing draw offer
@@ -714,7 +762,7 @@ public class Client extends Thread {
 					}
 					//Handle resignation
 					else if (game!=null && (m = resignPattern.matcher(temp)).find() && game.no == Integer.parseInt(m.group(1))) {
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							game.resign(player);
 							Player otherPlayer = (game.white==player)?game.black:game.white;
@@ -724,7 +772,7 @@ public class Client extends Thread {
 							otherPlayer.removeGame();
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Show game state
@@ -743,13 +791,13 @@ public class Client extends Thread {
 					else if ((m=observePattern.matcher(temp)).find()){
 						game = Game.games.get(Integer.parseInt(m.group(1)));
 						if(game!=null){
-							game.gamelock.lock();
+							game.gameLock.lock();
 							try{
 								spectating.add(game);
 								game.newSpectator(player);
 							}
 							finally{
-								game.gamelock.unlock();
+								game.gameLock.unlock();
 							}
 						} else
 							sendNOK();
@@ -758,14 +806,14 @@ public class Client extends Thread {
 					else if ((m=unobservePattern.matcher(temp)).find()){
 						game = Game.games.get(Integer.parseInt(m.group(1)));
 						if(game!=null){
-							game.gamelock.lock();
+							game.gameLock.lock();
 							try{
 								spectating.remove(game);
 								game.unSpectate(player);
 								sendWithoutLogging("OK");
 							}
 							finally{
-								game.gamelock.unlock();
+								game.gameLock.unlock();
 							}
 						} else
 							sendNOK();

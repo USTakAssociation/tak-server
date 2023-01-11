@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -45,10 +44,8 @@ public class Game {
 	boolean timerStarted;
 	long logOutWhite;
 	long logOutBlack;
-	//Timer timer;
-	//Timer disconnectionTimer;
-	static Timer timer=new Timer();
-	public Lock gamelock;
+	static Timer timer = new Timer();
+	public Lock gameLock;
 	TimerTask outOfTime;
 
 	Player drawOfferedBy;
@@ -73,6 +70,10 @@ public class Game {
 	int komi;
 	int unrated;
 	int tournament;
+	int triggerMove;
+	int timeAmount;
+	int playerWhiteMoveCount;
+	int playerBlackMoveCount;
 
 	class Board {
 		int boardSize;
@@ -148,21 +149,7 @@ public class Game {
 			}
 
 			boardSize = b;
-			/*
-			int capstonesCount=0;
-			int tilesCount=0;
-			switch(b) {
-				case 3: capstonesCount = 0; tilesCount = 10; break;
-				case 4: capstonesCount = 0; tilesCount = 15; break;
-				case 5: capstonesCount = 1; tilesCount = 21; break;
-				case 6: capstonesCount = 1; tilesCount = 30; break;
-				case 7: capstonesCount = 2; tilesCount = 40; break;
-				case 8: capstonesCount = 2; tilesCount = 50; break;
-			}
 
-			capCount = whiteCapstones = blackCapstones = capstonesCount;
-			tileCount = whiteTilesCount = blackTilesCount = tilesCount;
-			*/
 			whiteCapstones = blackCapstones = capCount;
 			whiteTilesCount = blackTilesCount = tileCount;
 			
@@ -257,17 +244,23 @@ public class Game {
 	 * @param b: board size
 	 * @param t: time in seconds
 	 * @param clr: color choice of p2
+	 * @param triggerMove: move number to trigger time amount to add
+	 * @param timeAmount: amount of time to add from trigger move
 	 */
-	Game(Player p1, Player p2, int b, int t, int i, Seek.COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament) {
-		gamelock=new ReentrantLock();
-		gamelock.lock();
+	Game(Player p1, Player p2, int b, int t, int i, Seek.COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount) {
+		gameLock = new ReentrantLock();
+		gameLock.lock();
 		try{
 			int rand = new Random().nextInt(2);
-			this.komi=komi;
-			tileCount=pieces;
-			capCount=capstones;
-			this.unrated=unrated;
-			this.tournament=tournament;
+			this.komi = komi;
+			tileCount = pieces;
+			capCount = capstones;
+			this.unrated = unrated;
+			this.tournament = tournament;
+			this.triggerMove = triggerMove;
+			this.timeAmount = timeAmount * 1000;
+			this.playerWhiteMoveCount = 0;
+			this.playerBlackMoveCount = 0;
 
 			if(clr == Seek.COLOR.ANY) {
 				white = (rand==0)?p1:p2;
@@ -281,7 +274,7 @@ public class Game {
 				TimerTask tt=new TimerTask() {
 					@Override
 					public void run() {
-						gamelock.lock();
+						gameLock.lock();
 						try{
 							if(board.moveCount==0 && gameState==gameS.NONE){
 								gameState = gameS.BLACK;
@@ -290,7 +283,7 @@ public class Game {
 							}
 						}
 						finally{
-							gamelock.unlock();
+							gameLock.unlock();
 						}
 					}
 				};
@@ -301,8 +294,8 @@ public class Game {
 			incrementTime = i*1000;
 
 			timerStarted = false;
-			logOutWhite=0;
-			logOutBlack=0;
+			logOutWhite = 0;
+			logOutBlack = 0;
 
 			time = System.currentTimeMillis();
 
@@ -323,34 +316,34 @@ public class Game {
 			insertEmpty();
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	static void addGame(Game g) {
-		g.gamelock.lock();
+		g.gameLock.lock();
 		try{
 			Game.games.put(g.no, g);
-			Game.updateGameListListeners("Add "+g.stringForm());
+			Game.updateGameListListeners("Add " + g.stringForm());
 		}
 		finally{
-			g.gamelock.unlock();
+			g.gameLock.unlock();
 		}
 	}
 
 	static void removeGame(Game g) {
-		g.gamelock.lock();
+		g.gameLock.lock();
 		try{
 			Game.updateGameListListeners("Remove "+g.stringForm());
 			Game.games.remove(g.no);
 		}
 		finally{
-			g.gamelock.unlock();
+			g.gameLock.unlock();
 		}
 	}
 
 	void newSpectator(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			p.send("Observe "+stringForm());
 			sendMoveListTo(p);
@@ -358,12 +351,12 @@ public class Game {
 			updateTime(p);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void resign(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(p == white)
 				gameState = gameS.BLACK;
@@ -372,22 +365,22 @@ public class Game {
 			whenGameEnd();
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void saveBoardPosition() {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			boardHistory.push(board.clone());
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void undoPosition() {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			boardHistory.pop();//discard cur pos
 			board = boardHistory.peek().clone();//replace cur pos with top of stack
@@ -395,12 +388,12 @@ public class Game {
 			moveList.remove(moveList.size()-1);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void undo(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(board.moveCount <= 0) {
 				p.sendNOK();
@@ -412,9 +405,24 @@ public class Game {
 				Player otherPlayer = (p==white)?black:white;
 				otherPlayer.sendWithoutLogging("Game#"+no+" RequestUndo");
 			} else if(undoRequestedBy != p) {
-				updateTimeTurnChange();
 				undoRequestedBy = null;
 				undoPosition();
+				if(isWhitesTurn()) {
+					if(this.playerWhiteMoveCount == this.triggerMove) {
+
+						whiteTime -= this.timeAmount;
+					}
+					--this.playerWhiteMoveCount;
+
+				}
+				else{
+					if(this.playerBlackMoveCount == this.triggerMove) {
+						blackTime -= this.timeAmount;
+					}
+					--this.playerBlackMoveCount;
+				}
+				justUpdateTime();
+				sendTimeToAll();
 				updateOutOfTime();
 				white.send("Game#"+no+" Undo");
 				black.send("Game#"+no+" Undo");
@@ -422,12 +430,12 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void removeUndo(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(undoRequestedBy == p) {
 				undoRequestedBy = null;
@@ -436,12 +444,12 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void draw(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(drawOfferedBy == null) {
 				drawOfferedBy = p;
@@ -453,12 +461,12 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void removeDraw(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(drawOfferedBy == p) {
 				drawOfferedBy = null;
@@ -467,17 +475,17 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void unSpectate(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			spectators.remove(p);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
@@ -488,20 +496,20 @@ public class Game {
 	}
 
 	void sendMoveListTo(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			for(String move:moveList)
 				p.sendWithoutLogging("Game#"+no+" "+move);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 	
-	String stringForm(){
-		gamelock.lock();
+	String stringForm() {
+		gameLock.lock();
 		try{
-			StringBuilder sb=new StringBuilder(no+"");
+			StringBuilder sb = new StringBuilder(no+"");
 			sb.append(" ").append(white.getName());
 			sb.append(" ").append(black.getName());
 			sb.append(" ").append(board.boardSize);
@@ -515,23 +523,9 @@ public class Game {
 			return sb.toString();
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
-	/*
-	String shortDesc(){
-		StringBuilder sb=new StringBuilder("Game#"+no+" ");
-		sb.append(white.getName()).append(" vs ").append(black.getName());
-		sb.append(", ").append(board.boardSize).append("x").append(board.boardSize).append(", ");
-		sb.append(originalTime/1000).append(", ");
-		sb.append(incrementTime/1000).append(", ");
-		sb.append(komi).append(" ");
-		sb.append(tileCount).append(" ");
-		sb.append(capCount).append(" ");
-		//sb.append(board.moveCount).append(" half-moves played, ").append(isWhitesTurn()?white.getName():black.getName()).append(" to move");
-		return sb.toString();
-	}
-	*/
 
 	static void registerGameListListener(Player p) {
 		gameListeners.add(p);
@@ -546,23 +540,7 @@ public class Game {
 		for (Player p : gameListeners) {
 			p.sendWithoutLogging("GameList " + st);
 		}
-		/*
-		new Thread() {
-			@Override
-			public void run() {
-
-			}
-		}.start();
-		*/
 	}
-	/*
-	@Override
-	public String toString() {
-		StringBuilder sb=new StringBuilder(shortDesc());
-		sb.append("\n").append(board.getBoardString());
-		return sb.toString();
-	}
-	*/
 
 	private boolean boundsCheck(char file, int rank) {
 		int fl = file - 'A';
@@ -580,7 +558,7 @@ public class Game {
 	}
 
 	String sqState(char file, int rank) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			Board.Square sq = board.getSquare(file, rank);
 			if(sq==null)
@@ -588,7 +566,7 @@ public class Game {
 			return sq.stackString();
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
@@ -676,7 +654,7 @@ public class Game {
 	}
 	
 	void updateOutOfTime(){
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(outOfTime!=null){
 				outOfTime.cancel();
@@ -716,7 +694,7 @@ public class Game {
 			timer.schedule(outOfTime,timeToCount);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
@@ -732,20 +710,31 @@ public class Game {
 		
 		if(!isWhitesTurn()) {
 			blackTime += incrementTime;
+			if(this.playerWhiteMoveCount == this.triggerMove) {
+				// Add time once trigger move is met
+				//System.out.println("white trigger move met");
+				whiteTime += this.timeAmount;
+				//System.out.println(whiteTime);
+			}
+
 		}
 		else{
 			whiteTime += incrementTime;
+			if(this.playerBlackMoveCount == this.triggerMove) {
+				// Add time once trigger move is met
+				//System.out.println("black trigger move met");
+				blackTime += this.timeAmount;
+				//System.out.println(blackTime);
+			}
 		}
+
 		justUpdateTime();
-		//updateOutOfTime();
 		sendTimeToAll();
 	}
 
 	Status placeMove(Player p, char file, int rank, boolean capstone, boolean wall) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
-			//System.out.println("file = "+file+" rank="+rank+" capstone="
-			  //	  +capstone+" wall="+wall);
 			Board.Square sq = board.getSquare(file, rank);
 			if(!turnOf(p))
 				return new Status("Not your turn", false);
@@ -775,7 +764,7 @@ public class Game {
 				//check if enough capstones, and decrement if there are
 				if(isCapstone(ch)) {
 					int caps = isWhitesTurn()?board.whiteCapstones:board.blackCapstones;
-					if(caps==0)
+					if(caps == 0)
 						return new Status("You're out of capstones", false);
 					if(isWhitesTurn())
 						board.whiteCapstones--;
@@ -789,8 +778,18 @@ public class Game {
 				}
 
 				sq.add(ch);
-				updateTimeTurnChange();
+
 				board.moveCount++;
+				System.out.println(board.moveCount);
+				// Add move count tracker add time trigger
+				// the logic is backwards which is why it's not whites turn but adding to the move count
+				if(!isWhitesTurn()) {
+					this.playerWhiteMoveCount++;
+				} else {
+					this.playerBlackMoveCount++;
+				}
+				updateTimeTurnChange();
+				
 				updateOutOfTime();
 				board.lastResetMove=board.moveCount;
 				String move="P "+file+rank+" "+(capstone?"C":"")+(wall?"W":"");
@@ -810,7 +809,7 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
@@ -843,7 +842,7 @@ public class Game {
 	}
 
 	String getPTN() {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			String ret="";
 			for(int i=0;i<board.boardSize;i++){
@@ -873,17 +872,13 @@ public class Game {
 			return ret;
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	Status moveMove(Player p, char f1, int r1, char f2, int r2, int[] vals) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
-	//		System.out.print("moveMove "+f1+""+r1+"->"+f2+""+r2+" ");
-	//		for(int i:vals)
-	//			System.out.print(i);
-	//		System.out.println("");
 			//alternate turns
 			if(!turnOf(p))
 				return new Status("Not your turn", false);
@@ -891,7 +886,7 @@ public class Game {
 			//first moves should be place moves
 			if(board.moveCount/2==0)
 				return new Status("First move should be place", false);
-
+			
 			//moves should be horizontal or vertical
 			if(f1!=f2 && r1!=r2)
 				return new Status("Move should be in straight line", false);
@@ -917,10 +912,6 @@ public class Game {
 			int num = (f1==f2)?abs(r1-r2):abs(f1-f2);
 			if(vals.length != num)
 				return new Status("Invalid move.", false);
-
-			//first square should not be negative
-			/*if(vals[0]<0)
-				return new Status("Invalid input", false);*/
 			//all other squares should be greater than 0
 			for(int i=0;i<vals.length;i++)
 				if(vals[i]<1)
@@ -981,9 +972,16 @@ public class Game {
 					}
 				}
 			}
-			updateTimeTurnChange();
+
 			board.moveCount++;
 			updateOutOfTime();
+			// the logic is backwards which is why it's not whties turn but adding to whites move count
+			if(!isWhitesTurn()) {
+				this.playerWhiteMoveCount++;
+			} else {
+				this.playerBlackMoveCount++;
+			}
+			updateTimeTurnChange();
 			String move = "M "+f1+r1+" "+f2+r2+" ";
 			for(int val: vals)
 				move+=val+" ";
@@ -997,11 +995,10 @@ public class Game {
 			checkStaleGame();
 			whenGameEnd();
 
-
 			return new Status(true);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
@@ -1058,6 +1055,7 @@ public class Game {
 			default: return "---";
 		}
 	}
+
 	private void insertEmpty() {
 		try {
 			String sql = "INSERT INTO games (date, size, player_white, player_black, timertime, timerinc, notation, result, rating_white, rating_black, unrated, tournament, komi, pieces, capstones, rating_change_white, rating_change_black) " +
@@ -1075,6 +1073,8 @@ public class Game {
 			stmt.setInt(9, white.getRating(time));
 			stmt.setInt(10, black.getRating(time));
 			stmt.setInt(11, unrated);
+			// TODO add moveAddTime and timeAmount
+			
 			stmt.setInt(12, tournament);
 			stmt.setInt(13, komi);
 			stmt.setInt(14, tileCount);
@@ -1124,14 +1124,8 @@ public class Game {
 		for(Player p:spectators){
 			p.sendWithoutLogging(msg);
 		}
-		/*
-		new Thread() {
-			@Override
-			public void run() {
-			}
-		}.start();
-		*/
 	}
+
 	private void findWhoWon() {
 		int blackCount=0, whiteCount=0;
 		for(int i=0;i<board.boardSize;i++){
@@ -1155,6 +1149,7 @@ public class Game {
 		else
 			gameState = gameS.BLACK_TILE;
 	}
+
 	private void checkOutOfSquares() {
 		if(gameState!=gameS.NONE)
 			return;
@@ -1167,6 +1162,7 @@ public class Game {
 		System.out.println("Out of squares");
 		findWhoWon();
 	}
+
 	private void checkStaleGame(){
 		if(gameState!=gameS.NONE)
 			return;
@@ -1188,29 +1184,25 @@ public class Game {
 				squares = new ArrayList<>();
 			}
 			boolean add(Board.Square sq) {
-			   if(lf==1000 || sq.file < lf) lf = sq.file;
-			   if(rf==1000 || sq.file > rf) rf = sq.file;
-			   if(br==1000 || sq.row-1 < br) br = sq.row-1;
-			   if(tr==1000 || sq.row-1 > tr) tr = sq.row-1;
+				if(lf==1000 || sq.file < lf) lf = sq.file;
+				if(rf==1000 || sq.file > rf) rf = sq.file;
+				if(br==1000 || sq.row-1 < br) br = sq.row-1;
+				if(tr==1000 || sq.row-1 > tr) tr = sq.row-1;
 
-			   squares.add(sq);
-			   sq.graphNo = no;
-			   //System.out.println("add "+no+" "+lf+" "+rf+" "+br+" "+tr);
+				squares.add(sq);
+				sq.graphNo = no;
 
-			   return (lf==0 && rf == board.boardSize-1) || (br==0 && tr==board.boardSize-1);
+				return (lf==0 && rf == board.boardSize-1) || (br==0 && tr==board.boardSize-1);
 			}
 			boolean merge(Graph g) {
 				if(g==this)
 					return false;
 				boolean ret=false;
-				//System.out.println("merge "+g.no+" with "+no);
 				for(Board.Square sq: g.squares) {
 					ret |= add(sq);
 					sq.graphNo = no;
 				}
 				g.no = no;
-				//System.out.println("	  "+no+" "+lf+" "+rf+" "+br+" "+tr);
-				//System.out.println(this);
 				return ret;
 			}
 			@Override
@@ -1288,7 +1280,7 @@ public class Game {
 	}
 
 	void checkPlayerQuit() {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			if(gameState!=gameS.NONE){
 				return;
@@ -1319,12 +1311,12 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void playerDisconnected(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			int time=reconnectionTime;
 			if(tournament==1){
@@ -1346,21 +1338,18 @@ public class Game {
 				}}, time*1000+1000);
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
 	void playerRejoin(Player p) {
-		gamelock.lock();
+		gameLock.lock();
 		try{
 			Player otherP = otherPlayer(p);
 			
 			String msg = "Game Start " + no +" "+board.boardSize+" "+white.getName()+" vs "+black.getName();
 			String msg2=(originalTime/1000)+" "+komi+" "+tileCount+" "+capCount;
 			p.send(msg+" "+((white==p)?"white":"black")+" "+msg2);
-
-			//String msg = "Game Start " + no +" "+board.boardSize+" "+white.getName()+" vs "+black.getName();
-			//p.send(msg+" "+((white==p)?"white":"black")+" "+originalTime);
 
 			sendMoveListTo(p);
 			updateTime(p);
@@ -1376,7 +1365,7 @@ public class Game {
 			}
 		}
 		finally{
-			gamelock.unlock();
+			gameLock.unlock();
 		}
 	}
 
@@ -1436,25 +1425,4 @@ public class Game {
 			count = 0;
 		}
 	}
-	/*
-	public static void main(String[] args) {
-		Database.initConnection();
-		try {
-			Statement stmt = Database.gamesConnection.createStatement();
-			stmt.executeUpdate("CREATE TABLE games " +
-					"(id INTEGER PRIMARY KEY," +
-					" date INT," +
-					" size INT," +
-					" player_white VARCHAR(20)," +
-					" player_black VARCHAR(20)," +
-					" notation TEXT," +
-					" result VARCAR(10));"
-					);
-
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	*/
 }

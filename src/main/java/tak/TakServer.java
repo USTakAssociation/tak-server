@@ -18,19 +18,19 @@ import java.util.logging.Logger;
  * @author chaitu
  */
 public class TakServer extends Thread{
+	public static int port;
+	public static int portws;
 
-	public static int port = 10000;
-	public static int portws = 9999;
-	/**
-	 */
 	@Override
 	public void run () {
 		ServerSocket ssocket;
 		ServerSocket wsocket;
 		try {
 			ssocket = new ServerSocket(port);
+			System.out.println("Server running at " + port);
 			ssocket.setSoTimeout(70);
 			wsocket = new ServerSocket(portws);
+			System.out.println("WebSocket Server running at " + portws);
 			wsocket.setSoTimeout(70);
 			while(true) {
 				try{

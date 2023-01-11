@@ -39,6 +39,7 @@ public class Settings {
 		parseEmail();
 		parseIRC();
 		parseGame();
+		parseServer();
 	}
 	
 	private static void parseEmail() {
@@ -71,7 +72,15 @@ public class Settings {
 		Node node = nList.item(0);
 		Element element = (Element)node;
 		
-		Game.reconnectionTime = Integer.parseInt(element.getElementsByTagName("reconnection-time").
-											item(0).getTextContent());
+		Game.reconnectionTime = Integer.parseInt(element.getElementsByTagName("reconnection-time").item(0).getTextContent());
+	}
+
+	private static void parseServer() {
+		NodeList nList = doc.getElementsByTagName("server-settings");
+		Node node = nList.item(0);
+		Element element = (Element)node;
+		TakServer.port = Integer.parseInt(element.getElementsByTagName("port").item(0).getTextContent());
+		TakServer.portws = Integer.parseInt(element.getElementsByTagName("portws").item(0).getTextContent());
+		Database.dbPath = element.getElementsByTagName("db-path").item(0).getTextContent();
 	}
 }

@@ -51,18 +51,4 @@ public class EMail {
 			Logger.getLogger(EMail.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-	/*
-	public static void main(String[] args) {
-		Settings.parse();
-		System.out.println("Sending mail");
-		System.out.print("To:");
-		
-		try {
-			EMail.send(new BufferedReader(new InputStreamReader(System.in)).readLine(), "test", "testing java mail");
-			System.out.println("Sent mail");
-		} catch (IOException ex) {
-			Logger.getLogger(EMail.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	*/
 }

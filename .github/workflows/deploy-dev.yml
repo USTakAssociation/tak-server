@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
     - uses: actions/checkout@v3
     - name: Set up JDK 11
@@ -20,8 +21,14 @@ jobs:
         mvn -B compile
         mvn -B package
     - name: Prep Artifact
+      env:
+        PROPERTIES : ${{ secrets.PROPERTIES }}
       run : |
-        tar -czf artifact-beta.tar.gz ./target/*.jar
+        rm properties.xml
+        touch properties.xml
+        echo "${PROPERTIES}" >> properties.xml
+        mv properties.xml ./target
+        tar -czf artifact-beta.tar.gz ./target/*
     - name: Deploy
       env: 
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY  }}
@@ -32,8 +39,8 @@ jobs:
         echo "$PRIVATE_KEY" > private_key.pem && chmod 0400 private_key.pem
         scp -P ${SSH_PORT} -o StrictHostKeyChecking=no -i private_key.pem artifact-beta.tar.gz ${USER_NAME}@${HOSTNAME}:~
         ssh -p ${SSH_PORT} -o StrictHostKeyChecking=no -i private_key.pem ${USER_NAME}@${HOSTNAME} '
-          source ~/.nvm/nvm.sh
-          rm -rf playtak-api-tmp
-          mkdir playtak-server-tmp
-          tar -xzf artifact-beta.tar.gz -C ./playtak-server-tmp
+          rm -rf playtak-server-beta-tmp
+          mkdir playtak-server-beta-tmp
+          tar -xzf artifact-beta.tar.gz -C ./playtak-server-beta-tmp
+          sudo rsync -a playtak-server-beta-tmp/target/ /var/apps/playtak-server-beta
         '

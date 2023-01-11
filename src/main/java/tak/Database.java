@@ -18,11 +18,13 @@ import java.util.logging.Logger;
 public class Database {
 	public static Connection playersConnection;
 	public static Connection gamesConnection;
+	public static String dbPath;
+
 	public static void initConnection() {
 		try {
 			Class.forName("org.sqlite.JDBC");
-			playersConnection = DriverManager.getConnection("jdbc:sqlite:players.db");
-			gamesConnection = DriverManager.getConnection("jdbc:sqlite:games.db");
+			playersConnection = DriverManager.getConnection("jdbc:sqlite:" + dbPath + "players.db");
+			gamesConnection = DriverManager.getConnection("jdbc:sqlite:" + dbPath +"games.db");
 		} catch (ClassNotFoundException | SQLException ex) {
 			Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
 		}

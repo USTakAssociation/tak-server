@@ -38,7 +38,6 @@ public class Websocket{
 	String wskey;
 	
 	Websocket(){
-		
 	}
 	
 	Websocket(Socket socket){
