@@ -29,7 +29,7 @@ jobs:
         echo "${PROPERTIES}" >> properties.xml
         mkdir dist
         mv properties.xml ./dist
-        mv ./target/takserver-jar-with-dependencies.jar ./dist/takserver.jar
+        mv ./target/takserver-jar-with-dependencies.jar ./dist/takserver-beta.jar
         tar -czf artifact-beta.tar.gz ./dist/*
     - name: Deploy
       env: 
@@ -44,10 +44,8 @@ jobs:
           rm -rf playtak-server-beta-tmp
           mkdir playtak-server-beta-tmp
           tar -xzf artifact-beta.tar.gz -C ./playtak-server-beta-tmp
-          javapid=`cat pid.tmp`
-          sudo kill -9 $javapid
+          for pid in $(pgrep -f takserver-beta.jar); do sudo kill -9 $pid; done
           sudo rsync -a playtak-server-beta-tmp/dist/ /var/apps/playtak-server-beta
           cd /var/apps/playtak-server-beta
-          sudo nohup java -jar takserver.jar 2>&1 &
-          echo $! > pid.tmp
+          sudo java -jar takserver-beta.jar > /dev/null 2>&1 &
         '
