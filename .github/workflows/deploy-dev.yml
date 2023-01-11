@@ -47,6 +47,7 @@ jobs:
           javapid=`cat pid.tmp`
           sudo kill -9 $javapid
           sudo rsync -a playtak-server-beta-tmp/dist/ /var/apps/playtak-server-beta
+          cd /var/apps/playtak-server-beta
           sudo nohup java -jar takserver.jar 2>&1 &
           echo $! > pid.tmp
         '
