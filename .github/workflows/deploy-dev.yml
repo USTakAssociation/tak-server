@@ -48,10 +48,9 @@ jobs:
           echo "extracting artifact"
           tar -xzf artifact-beta.tar.gz -C ./playtak-server-beta-tmp
           echo "stopping existing beta takserver"
-          exec sudo pkill -f [t]akserver-beta.jar
+          sudo systemctl stop takserver-beta.service
           echo "rsyncing files into beta folder"
           sudo rsync -a playtak-server-beta-tmp/dist/ /var/apps/playtak-server-beta
           echo "Starting app"
-          cd /var/apps/playtak-server-beta
-          sudo java -jar takserver-beta.jar > /dev/null 2>&1 &
+          sudo systemctl start takserver-beta.service
         '
