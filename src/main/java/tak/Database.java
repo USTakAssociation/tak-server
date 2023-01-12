@@ -25,6 +25,7 @@ public class Database {
 			Class.forName("org.sqlite.JDBC");
 			playersConnection = DriverManager.getConnection("jdbc:sqlite:" + dbPath + "players.db");
 			gamesConnection = DriverManager.getConnection("jdbc:sqlite:" + dbPath +"games.db");
+			System.out.println('databases connected...');
 		} catch (ClassNotFoundException | SQLException ex) {
 			Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
 		}
