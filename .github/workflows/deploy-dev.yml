@@ -41,11 +41,16 @@ jobs:
         echo "$PRIVATE_KEY" > private_key.pem && chmod 0400 private_key.pem
         scp -P ${SSH_PORT} -o StrictHostKeyChecking=no -i private_key.pem artifact-beta.tar.gz ${USER_NAME}@${HOSTNAME}:~
         ssh -p ${SSH_PORT} -o StrictHostKeyChecking=no -i private_key.pem ${USER_NAME}@${HOSTNAME} '
+          echo "setting up tmp folder"
           rm -rf playtak-server-beta-tmp
           mkdir playtak-server-beta-tmp
+          echo "extracting artifact"
           tar -xzf artifact-beta.tar.gz -C ./playtak-server-beta-tmp
+          echo "stopping existing beta takserver"
           for pid in $(pgrep -f takserver-beta.jar); do sudo kill -9 $pid; done
+          echo "rsyncing files into beta folder"
           sudo rsync -a playtak-server-beta-tmp/dist/ /var/apps/playtak-server-beta
+          echo "Starting app"
           cd /var/apps/playtak-server-beta
           sudo java -jar takserver-beta.jar > /dev/null 2>&1 &
         '
