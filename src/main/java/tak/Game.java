@@ -1058,8 +1058,8 @@ public class Game {
 
 	private void insertEmpty() {
 		try {
-			String sql = "INSERT INTO games (date, size, player_white, player_black, timertime, timerinc, notation, result, rating_white, rating_black, unrated, tournament, komi, pieces, capstones, rating_change_white, rating_change_black) " +
-				"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			String sql = "INSERT INTO games (date, size, player_white, player_black, timertime, timerinc, notation, result, rating_white, rating_black, unrated, tournament, komi, pieces, capstones, rating_change_white, rating_change_black, extra_time_amount, extra_time_trigger) " +
+				"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			PreparedStatement stmt = Database.gamesConnection.prepareStatement
 				(sql, Statement.RETURN_GENERATED_KEYS);
 			stmt.setLong(1, time);
@@ -1073,7 +1073,6 @@ public class Game {
 			stmt.setInt(9, white.getRating(time));
 			stmt.setInt(10, black.getRating(time));
 			stmt.setInt(11, unrated);
-			// TODO add moveAddTime and timeAmount
 			
 			stmt.setInt(12, tournament);
 			stmt.setInt(13, komi);
@@ -1081,6 +1080,8 @@ public class Game {
 			stmt.setInt(15, capCount);
 			stmt.setInt(16, -1000);
 			stmt.setInt(17, -1000);
+			stmt.setInt(18, timeAmount / 1000);
+			stmt.setInt(19, triggerMove);
 			stmt.executeUpdate();
 			ResultSet inserted = stmt.getGeneratedKeys();
 			if (inserted.next())
