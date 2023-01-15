@@ -710,21 +710,16 @@ public class Game {
 		
 		if(!isWhitesTurn()) {
 			blackTime += incrementTime;
-			if(this.playerWhiteMoveCount == this.triggerMove) {
 				// Add time once trigger move is met
-				//System.out.println("white trigger move met");
+			if(this.playerWhiteMoveCount == this.triggerMove) {
 				whiteTime += this.timeAmount;
-				//System.out.println(whiteTime);
 			}
-
 		}
 		else{
 			whiteTime += incrementTime;
-			if(this.playerBlackMoveCount == this.triggerMove) {
 				// Add time once trigger move is met
-				//System.out.println("black trigger move met");
+			if(this.playerBlackMoveCount == this.triggerMove) {
 				blackTime += this.timeAmount;
-				//System.out.println(blackTime);
 			}
 		}
 
@@ -779,8 +774,6 @@ public class Game {
 
 				sq.add(ch);
 
-				board.moveCount++;
-				System.out.println(board.moveCount);
 				// Add move count tracker add time trigger
 				// the logic is backwards which is why it's not whites turn but adding to the move count
 				if(!isWhitesTurn()) {
@@ -789,7 +782,7 @@ public class Game {
 					this.playerBlackMoveCount++;
 				}
 				updateTimeTurnChange();
-				
+				board.moveCount++;
 				updateOutOfTime();
 				board.lastResetMove=board.moveCount;
 				String move="P "+file+rank+" "+(capstone?"C":"")+(wall?"W":"");
