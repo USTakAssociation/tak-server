@@ -650,8 +650,8 @@ public class Game {
 		} else {
 			whiteTime -= elapsedMS;
 		}
-		System.out.println("Black time: " + blackTime);
-		System.out.println("White time: " + whiteTime);
+		// System.out.println("Black time: " + blackTime);
+		// System.out.println("White time: " + whiteTime);
 		lastUpdateTime = curTime;
 	}
 	
