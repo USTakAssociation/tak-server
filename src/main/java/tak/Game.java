@@ -650,6 +650,8 @@ public class Game {
 		} else {
 			whiteTime -= elapsedMS;
 		}
+		System.out.println("Black time: " + blackTime);
+		System.out.println("White time: " + whiteTime);
 		lastUpdateTime = curTime;
 	}
 	
@@ -710,17 +712,17 @@ public class Game {
 		
 		if(!isWhitesTurn()) {
 			blackTime += incrementTime;
-				// Add time once trigger move is met
-			if(this.playerWhiteMoveCount == this.triggerMove) {
-				whiteTime += this.timeAmount;
-			}
+			// Add time once trigger move is met
+			// if(this.playerWhiteMoveCount == this.triggerMove) {
+			// 	whiteTime += this.timeAmount;
+			// }
 		}
 		else{
 			whiteTime += incrementTime;
-				// Add time once trigger move is met
-			if(this.playerBlackMoveCount == this.triggerMove) {
-				blackTime += this.timeAmount;
-			}
+			// Add time once trigger move is met
+			// if(this.playerBlackMoveCount == this.triggerMove) {
+			// 	blackTime += this.timeAmount;
+			// }
 		}
 
 		justUpdateTime();
@@ -775,12 +777,12 @@ public class Game {
 				sq.add(ch);
 
 				// Add move count tracker add time trigger
-				// the logic is backwards which is why it's not whites turn but adding to the move count
-				if(!isWhitesTurn()) {
-					this.playerWhiteMoveCount++;
-				} else {
-					this.playerBlackMoveCount++;
-				}
+				// the logic is backwards which is why it's not whites turn but adding to whites move count
+				// if(!isWhitesTurn()) {
+				// 	this.playerWhiteMoveCount++;
+				// } else {
+				// 	this.playerBlackMoveCount++;
+				// }
 				updateTimeTurnChange();
 				board.moveCount++;
 				updateOutOfTime();
