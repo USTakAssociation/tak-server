@@ -408,22 +408,6 @@ public class Game {
 				updateTimeTurnChange();
 				undoRequestedBy = null;
 				undoPosition();
-				if(isWhitesTurn()) {
-					if(this.playerWhiteMoveCount == this.triggerMove) {
-
-						whiteTime -= this.timeAmount;
-					}
-					--this.playerWhiteMoveCount;
-
-				}
-				else{
-					if(this.playerBlackMoveCount == this.triggerMove) {
-						blackTime -= this.timeAmount;
-					}
-					--this.playerBlackMoveCount;
-				}
-				justUpdateTime();
-				sendTimeToAll();
 				updateOutOfTime();
 				white.send("Game#"+no+" Undo");
 				black.send("Game#"+no+" Undo");
@@ -713,15 +697,15 @@ public class Game {
 		if(!isWhitesTurn()) {
 			blackTime += incrementTime;
 			// Add time once trigger move is met
-			if(this.playerWhiteMoveCount == this.triggerMove) {
-				whiteTime += this.timeAmount;
+			if(this.playerBlackMoveCount == this.triggerMove) {
+				blackTime += this.timeAmount;
 			}
 		}
 		else{
 			whiteTime += incrementTime;
 			// Add time once trigger move is met
-			if(this.playerBlackMoveCount == this.triggerMove) {
-				blackTime += this.timeAmount;
+			if(this.playerWhiteMoveCount == this.triggerMove) {
+				whiteTime += this.timeAmount;
 			}
 		}
 
