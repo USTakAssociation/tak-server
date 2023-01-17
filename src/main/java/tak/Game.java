@@ -405,6 +405,7 @@ public class Game {
 				Player otherPlayer = (p==white)?black:white;
 				otherPlayer.sendWithoutLogging("Game#"+no+" RequestUndo");
 			} else if(undoRequestedBy != p) {
+				updateTimeTurnChange();
 				undoRequestedBy = null;
 				undoPosition();
 				if(isWhitesTurn()) {
@@ -650,8 +651,7 @@ public class Game {
 		} else {
 			whiteTime -= elapsedMS;
 		}
-		// System.out.println("Black time: " + blackTime);
-		// System.out.println("White time: " + whiteTime);
+
 		lastUpdateTime = curTime;
 	}
 	
@@ -713,16 +713,16 @@ public class Game {
 		if(!isWhitesTurn()) {
 			blackTime += incrementTime;
 			// Add time once trigger move is met
-			// if(this.playerWhiteMoveCount == this.triggerMove) {
-			// 	whiteTime += this.timeAmount;
-			// }
+			if(this.playerWhiteMoveCount == this.triggerMove) {
+				whiteTime += this.timeAmount;
+			}
 		}
 		else{
 			whiteTime += incrementTime;
 			// Add time once trigger move is met
-			// if(this.playerBlackMoveCount == this.triggerMove) {
-			// 	blackTime += this.timeAmount;
-			// }
+			if(this.playerBlackMoveCount == this.triggerMove) {
+				blackTime += this.timeAmount;
+			}
 		}
 
 		justUpdateTime();
@@ -775,14 +775,13 @@ public class Game {
 				}
 
 				sq.add(ch);
-
 				// Add move count tracker add time trigger
 				// the logic is backwards which is why it's not whites turn but adding to whites move count
-				// if(!isWhitesTurn()) {
-				// 	this.playerWhiteMoveCount++;
-				// } else {
-				// 	this.playerBlackMoveCount++;
-				// }
+				if(!isWhitesTurn()) {
+					this.playerWhiteMoveCount++;
+				} else {
+					this.playerBlackMoveCount++;
+				}
 				updateTimeTurnChange();
 				board.moveCount++;
 				updateOutOfTime();
@@ -802,69 +801,6 @@ public class Game {
 			} else {
 				return new Status("Square not empty", false);
 			}
-		}
-		finally{
-			gameLock.unlock();
-		}
-	}
-
-	private Player stackController(Board.Square sq) {
-		return Character.isUpperCase(sq.topOfStack())?white:black;
-	}
-
-	boolean isCapstone(char c) {
-		return Character.toLowerCase(c) == CAPSTONE;
-	}
-
-	boolean isWall(char c) {
-		return Character.toLowerCase(c) == WALL;
-	}
-
-	boolean isFlat(char c) {
-		return Character.toLowerCase(c) == FLAT;
-	}
-
-	boolean isBlack(char c) {
-		return (c==FLAT)||(c==WALL)||(c==CAPSTONE);
-	}
-
-	boolean isWhite(char c) {
-		return c!=0 && !isBlack(c);
-	}
-
-	static int abs(int x) {
-		return x>0?x:-x;
-	}
-
-	String getPTN() {
-		gameLock.lock();
-		try{
-			String ret="";
-			for(int i=0;i<board.boardSize;i++){
-				int xcnt=0;
-				for(int j=0;j<board.boardSize;j++){
-					Board.Square sq = board.squares[i][j];
-					if(sq.isEmpty())
-						xcnt=0;
-					else {
-						ret+="x"+xcnt;
-						String cell="";
-						for(int k=0;k<sq.size();k++){
-							char ch = sq.get(k);
-							cell+=isWhite(ch)?"1":"2";
-							if(isWall(ch))
-								cell+="S";
-							else if(isCapstone(ch))
-								cell+="C";
-						}
-						if(j!=board.boardSize-1)
-							cell+=",";
-					}
-				}
-				ret+="/";
-			}
-			ret+=" "+board.moveCount+" "+(isWhitesTurn()?"1":"2");
-			return ret;
 		}
 		finally{
 			gameLock.unlock();
@@ -967,9 +903,6 @@ public class Game {
 					}
 				}
 			}
-
-			board.moveCount++;
-			updateOutOfTime();
 			// the logic is backwards which is why it's not whties turn but adding to whites move count
 			if(!isWhitesTurn()) {
 				this.playerWhiteMoveCount++;
@@ -977,6 +910,8 @@ public class Game {
 				this.playerBlackMoveCount++;
 			}
 			updateTimeTurnChange();
+			board.moveCount++;
+			updateOutOfTime();
 			String move = "M "+f1+r1+" "+f2+r2+" ";
 			for(int val: vals)
 				move+=val+" ";
@@ -991,6 +926,69 @@ public class Game {
 			whenGameEnd();
 
 			return new Status(true);
+		}
+		finally{
+			gameLock.unlock();
+		}
+	}
+
+	private Player stackController(Board.Square sq) {
+		return Character.isUpperCase(sq.topOfStack())?white:black;
+	}
+
+	boolean isCapstone(char c) {
+		return Character.toLowerCase(c) == CAPSTONE;
+	}
+
+	boolean isWall(char c) {
+		return Character.toLowerCase(c) == WALL;
+	}
+
+	boolean isFlat(char c) {
+		return Character.toLowerCase(c) == FLAT;
+	}
+
+	boolean isBlack(char c) {
+		return (c==FLAT)||(c==WALL)||(c==CAPSTONE);
+	}
+
+	boolean isWhite(char c) {
+		return c!=0 && !isBlack(c);
+	}
+
+	static int abs(int x) {
+		return x>0?x:-x;
+	}
+
+	String getPTN() {
+		gameLock.lock();
+		try{
+			String ret="";
+			for(int i=0;i<board.boardSize;i++){
+				int xcnt=0;
+				for(int j=0;j<board.boardSize;j++){
+					Board.Square sq = board.squares[i][j];
+					if(sq.isEmpty())
+						xcnt=0;
+					else {
+						ret+="x"+xcnt;
+						String cell="";
+						for(int k=0;k<sq.size();k++){
+							char ch = sq.get(k);
+							cell+=isWhite(ch)?"1":"2";
+							if(isWall(ch))
+								cell+="S";
+							else if(isCapstone(ch))
+								cell+="C";
+						}
+						if(j!=board.boardSize-1)
+							cell+=",";
+					}
+				}
+				ret+="/";
+			}
+			ret+=" "+board.moveCount+" "+(isWhitesTurn()?"1":"2");
+			return ret;
 		}
 		finally{
 			gameLock.unlock();
