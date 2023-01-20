@@ -701,6 +701,7 @@ public class Game {
 			// Add time once trigger move is met
 			if(this.playerBlackMoveCount == this.triggerMove) {
 				blackTime += this.timeAmount;
+				this.playerBlackMoveCount++;
 			}
 		}
 		else{
@@ -708,6 +709,7 @@ public class Game {
 			// Add time once trigger move is met
 			if(this.playerWhiteMoveCount == this.triggerMove) {
 				whiteTime += this.timeAmount;
+				this.playerWhiteMoveCount++;
 			}
 		}
 
