@@ -504,7 +504,7 @@ public class Client extends Thread {
 						Seek.sendListTo(this);
 
 					}
-					//Seek a game
+					//Seek a game V3
 					else if (game==null && (m = seekV3Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
@@ -533,9 +533,9 @@ public class Client extends Thread {
 										Integer.parseInt(m.group(7)),
 										Integer.parseInt(m.group(8)),
 										Integer.parseInt(m.group(9)),
-										m.group(12),
 										Integer.parseInt(m.group(10)),
-										Integer.parseInt(m.group(11))
+										Integer.parseInt(m.group(11)),
+										m.group(12)
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -544,7 +544,7 @@ public class Client extends Thread {
 							Seek.seekStuffLock.unlock();
 						}
 					}
-					//Seek a game
+					//Seek a game V2
 					else if (game==null && (m = seekV2Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
@@ -573,9 +573,9 @@ public class Client extends Thread {
 									Integer.parseInt(m.group(7)),
 									Integer.parseInt(m.group(8)),
 									Integer.parseInt(m.group(9)),
-									m.group(10),
 									0,
-									0
+									0,
+									m.group(10)
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -584,7 +584,7 @@ public class Client extends Thread {
 							Seek.seekStuffLock.unlock();
 						}
 					}
-					//Seek a game
+					//Seek a game V1
 					else if (game==null && (m = seekV1Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
@@ -625,9 +625,9 @@ public class Client extends Thread {
 									capstonesCount,
 									0,
 									0,
-									"",
 									0,
-									0
+									0,
+									""
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -662,7 +662,7 @@ public class Client extends Thread {
 									otherClient.player.setGame(game);
 									
 									String msg = "Game Start " + game.no +" "+sz+" "+game.white.getName()+" vs "+game.black.getName();
-									String msg2=time+" "+sk.komi+" "+sk.pieces+" "+sk.capstones;
+									String msg2 = time + " " + sk.komi + " " + sk.pieces + " " + sk.capstones + " " + sk.triggerMove + " " + sk.timeAmount;
 									send(msg+" "+((game.white==player)?"white":"black")+" "+msg2);
 									otherClient.send(msg+" "+((game.white==otherClient.player)?"white":"black")+" "+msg2);
 								}

@@ -505,6 +505,8 @@ public class Game {
 			sb.append(" ").append(capCount);
 			sb.append(" ").append(unrated);
 			sb.append(" ").append(tournament);
+			sb.append(" ").append(triggerMove);
+			sb.append(" ").append(timeAmount/1000);
 			return sb.toString();
 		}
 		finally{
@@ -761,7 +763,7 @@ public class Game {
 				sq.add(ch);
 				// Add move count tracker add time trigger
 				// the logic is backwards which is why it's not whites turn but adding to whites move count
-				if(!isWhitesTurn()) {
+				if(isWhitesTurn()) {
 					this.playerWhiteMoveCount++;
 				} else {
 					this.playerBlackMoveCount++;
@@ -888,7 +890,7 @@ public class Game {
 				}
 			}
 			// the logic is backwards which is why it's not whties turn but adding to whites move count
-			if(!isWhitesTurn()) {
+			if(isWhitesTurn()) {
 				this.playerWhiteMoveCount++;
 			} else {
 				this.playerBlackMoveCount++;
@@ -1213,7 +1215,6 @@ public class Game {
 				boolean over=false;
 
 				Board.Square lsq = board.getSquare((char)('A'+i-1), j+1);
-				//System.out.println("lsq "+lsq);
 				if(lsq!=null){
 					char lch = lsq.topOfStack();
 					if(lch!=0 && isWhite(ch)==isWhite(lch) && !isWall(lch)){
@@ -1326,7 +1327,7 @@ public class Game {
 			Player otherP = otherPlayer(p);
 			
 			String msg = "Game Start " + no +" "+board.boardSize+" "+white.getName()+" vs "+black.getName();
-			String msg2=(originalTime/1000)+" "+komi+" "+tileCount+" "+capCount;
+			String msg2 = (originalTime/1000) + " " + komi + " " + tileCount + " " + capCount + " " + triggerMove + " " + timeAmount / 1000;
 			p.send(msg+" "+((white==p)?"white":"black")+" "+msg2);
 
 			sendMoveListTo(p);
