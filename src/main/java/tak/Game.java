@@ -405,6 +405,12 @@ public class Game {
 				Player otherPlayer = (p==white)?black:white;
 				otherPlayer.sendWithoutLogging("Game#"+no+" RequestUndo");
 			} else if(undoRequestedBy != p) {
+				// logic is backwards which is why its not whites turn but removing white move count
+				if(!isWhitesTurn()) {
+					this.playerWhiteMoveCount--;
+				} else {
+					this.playerBlackMoveCount--;
+				}
 				updateTimeTurnChange();
 				undoRequestedBy = null;
 				undoPosition();
