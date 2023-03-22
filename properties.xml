@@ -18,4 +18,10 @@
   <game>
     <reconnection-time>120</reconnection-time>
   </game>
+  
+  <server-settings>
+	<port>10000</port>
+	<portws>9998</portws>
+    <db-path></db-path>
+  </server-settings>
 </playtak.com>

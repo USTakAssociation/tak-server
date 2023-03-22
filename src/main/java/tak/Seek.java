@@ -28,6 +28,8 @@ public class Seek {
 	int capstones;
 	int unrated;
 	int tournament;
+	int triggerMove;
+	int timeAmount;
 	String opponent;
 	enum COLOR {WHITE, BLACK, ANY};
 	COLOR color;
@@ -38,10 +40,11 @@ public class Seek {
 	static Map<Integer, Seek> seeks = new ConcurrentHashMap<>();
 	static ConcurrentHashSet<Client> seekListeners = new ConcurrentHashSet<>();
 	
-	static Seek newSeek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, String opponent) {
+	static Seek newSeek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
 		seekStuffLock.lock();
 		try{
-			Seek sk = new Seek(c, b, t, i, clr, komi, pieces, capstones, unrated, tournament, opponent);
+			Seek sk = new Seek(c, b, t, i, clr, komi, pieces, capstones, unrated, tournament, triggerMove, timeAmount, opponent);
+			System.out.println("Print Seek " + sk.toString());
 			addSeek(sk);
 			return sk;
 		}
@@ -50,7 +53,7 @@ public class Seek {
 		}
 	}
 	
-	Seek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, String opponent) {
+	Seek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
 		seekStuffLock.lock();
 		try{
 			client = c;
@@ -58,13 +61,15 @@ public class Seek {
 			time = t;
 			incr = i;
 			color = clr;
-			this.komi=Math.min(komi,8);
-			this.pieces=Math.max(Math.min(pieces,80),10);
-			this.capstones=Math.min(capstones,5);
-			this.unrated=unrated;
-			this.tournament=tournament;
-			this.opponent=opponent;
-			
+			this.komi = Math.min(komi,8);
+			this.pieces = Math.max(Math.min(pieces,80),10);
+			this.capstones = Math.min(capstones,5);
+			this.unrated = unrated;
+			this.tournament = tournament;
+			this.triggerMove = triggerMove;
+			this.timeAmount = timeAmount;
+			this.opponent = opponent;
+
 			if (b < 3 || b > 8)
 				b = DEFAULT_SIZE;
 			boardSize = b;
@@ -90,7 +95,7 @@ public class Seek {
 		seekStuffLock.lock();
 		try{
 			Seek.seeks.put(sk.no, sk);
-			updateListeners("new "+sk.toString());
+			updateListeners("new " + sk.toString());
 		}
 		finally{
 			seekStuffLock.unlock();
@@ -151,7 +156,7 @@ public class Seek {
 			else if(color == COLOR.BLACK)
 				clr = "B";
 			
-			return (no+" "+client.player.getName()+" "+boardSize+" "+time+" "+incr+" "+clr+" "+komi+" "+pieces+" "+capstones+" "+unrated+" "+tournament+" "+opponent);
+			return (no+" "+client.player.getName()+" " + boardSize + " " + time + " " + incr + " " + clr + " " + komi + " " + pieces + " " + capstones + " " + unrated + " " + tournament + " " + triggerMove + " " + timeAmount + " " + opponent);
 		}
 		finally{
 			seekStuffLock.unlock();

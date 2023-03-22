@@ -12,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -40,7 +39,6 @@ public class Player {
 	private String password;
 	private String email;
 	private int id;//Primary key
-	//private int ratingid;
 
 	//Ratings for 4x4.. 8x8 games
 	private int r4;
@@ -51,7 +49,8 @@ public class Player {
 	
 	private boolean guest;
 	public boolean isbot=false;
-	private boolean mod = false;
+	public boolean is_admin = false;
+	public boolean is_mod = false;
 	private boolean gag = false;//don't broadcast his shouts
 	//variables not in database
 	public Client client;
@@ -82,7 +81,7 @@ public class Player {
 	}
 	
 	Player(String name, String email, String password, int id, int r4, int r5,
-						int r6, int r7, int r8, boolean guest, boolean bot) {
+			int r6, int r7, int r8, boolean guest, boolean bot, boolean admin, boolean mod) {
 		this.name = name;
 		this.email = email;
 		this.password = password;
@@ -95,6 +94,12 @@ public class Player {
 		this.guest = guest;
 		this.resetToken = "";
 		this.isbot=bot;
+		this.is_admin = admin;
+		this.is_mod = mod;
+
+		if(mod){
+			setMod();
+		}
 		
 		client = null;
 		game = null;
@@ -191,17 +196,21 @@ public class Player {
 	}
 	
 	public boolean isMod() {
-		return mod;
+		return is_mod;
 	}
 	
 	public void setMod() {
-		mod = true;
+		is_mod = true;
 		modList.add(this);
 	}
 	
 	public void unMod() {
-		mod = false;
+		is_mod = false;
 		modList.remove(this);
+	}
+
+	public boolean isAdmin() {
+		return is_admin;
 	}
 	
 	public void gag() {
@@ -227,7 +236,7 @@ public class Player {
 	}
 	
 	Player(String name, String email, String password, boolean guest) {
-		this(name, email, password, guest?0:++idCount, 0, 0, 0, 0, 0, guest, false);
+		this(name, email, password, guest?0:++idCount, 0, 0, 0, 0, 0, guest, false, false, false);
 	}
 	
 	Player() {
@@ -278,8 +287,7 @@ public class Player {
 			stmt.setInt(7, np.r6);
 			stmt.setInt(8, np.r7);
 			stmt.setInt(9, np.r8);
-			
-			//System.out.println("SQL:: "+sql);
+
 			stmt.executeUpdate();
 			stmt.close();
 			
@@ -357,10 +365,7 @@ public class Player {
 			return (int)rating;
 		}
 		double decaytime=((double)time-ratingage)/decayrate;
-		//System.out.println("decaytime: "+decaytime);
-		//System.out.println("time: "+time);
-		//System.out.println("ratingage: "+ratingage);
-		//System.out.println("decayrate: "+decayrate);
+
 		if(decaytime<1.0){
 			return (int)rating;
 		}
@@ -463,7 +468,21 @@ public class Player {
 			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-	
+
+	public void setModInDB(String name, int mod) {
+		String sql = "UPDATE players set is_mod = ? where name = ?;";
+
+		try {
+			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
+			stmt.setInt(1, mod);
+			stmt.setString(2, name);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException ex) {
+			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
+
 	public int getR4() {
 		return r4;
 	}
@@ -505,20 +524,21 @@ public class Player {
 		try (Statement stmt = Database.playersConnection.createStatement();
 				ResultSet rs = stmt.executeQuery("SELECT * FROM players;")) {
 			while(rs.next()) {
-				Player np = new Player(rs.getString("name"),
-						rs.getString("email"),
-						rs.getString("password"),
-						rs.getInt("id"),
-						rs.getInt("r4"),
-						rs.getInt("r5"),
-						rs.getInt("r6"),
-						rs.getInt("r7"),
-						rs.getInt("r8"),
-						false,
-						rs.getInt("isbot")==1
+				Player np = new Player(
+							rs.getString("name"),
+							rs.getString("email"),
+							rs.getString("password"),
+							rs.getInt("id"),
+							rs.getInt("r4"),
+							rs.getInt("r5"),
+							rs.getInt("r6"),
+							rs.getInt("r7"),
+							rs.getInt("r8"),
+							false,
+							rs.getInt("isbot") == 1,
+							rs.getInt("is_admin") == 1,
+							rs.getInt("is_mod") == 1
 						);
-
-				//System.out.println("Read player "+np);
 				players.put(np.name, np);
 				takeName(np.name);
 				if(idCount<np.id)
@@ -529,41 +549,4 @@ public class Player {
 			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-	/*
-	public static void main(String[] args) {
-		Database.initConnection();
-//		try {
-//			Statement stmt = Database.connection.createStatement();
-//			stmt.executeUpdate("CREATE TABLE players " +
-//					"(id INT PRIMARY KEY," +
-//					" name VARCHAR(20)," +
-//					" password VARCHAR(50),"+
-//					" email VARCHAR(50),"+
-//					" r4 INT," +
-//					" r5 INT," +
-//					" r6 INT," +
-//					" r7 INT," +
-//					" r8 INT)");
-//			
-//			stmt.close();
-//		} catch (SQLException ex) {
-//			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-//		}
-//		
-//		createPlayer("kaka", "kaka@playtak.com");
-//		createPlayer("kaki", "kaki@playtak.com");
-//		createPlayer("baba", "baba@playtak.com");
-
-		loadFromDB();
-		
-		//Test update
-//		Player p3 = players.get("player3");
-//		System.out.println("player3 "+p3);
-//		p3.setR5(57);
-//		System.out.println("player3 "+p3);
-		
-		//Test create after load
-		createPlayer("player4", "player4@playtak.com");
-	}
-	*/
 }

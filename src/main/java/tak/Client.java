@@ -4,14 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -93,11 +86,14 @@ public class Client extends Thread {
 	String resignString = "^Game#(\\d+) Resign";
 	Pattern resignPattern;
 
-	String seekString = "^Seek (\\d) (\\d+) (\\d+) ([WBA]) (\\d+) (\\d+) (\\d+) (0|1) (0|1) ([A-Za-z0-9_]*)";
-	Pattern seekPattern;
+	String seekV3String = "^Seek (\\d) (\\d+) (\\d+) ([WBA]) (\\d+) (\\d+) (\\d+) (0|1) (0|1) (\\d+) (\\d+) ([A-Za-z0-9_]*)";
+	Pattern seekV3Pattern;
 
-	String oldSeekString = "^Seek (\\d) (\\d+) (\\d+)( [WB])?";
-	Pattern oldSeekPattern;
+	String seekV2String = "^Seek (\\d) (\\d+) (\\d+) ([WBA]) (\\d+) (\\d+) (\\d+) (0|1) (0|1) ([A-Za-z0-9_]*)";
+	Pattern seekV2Pattern;
+
+	String seekV1String = "^Seek (\\d) (\\d+) (\\d+)( [WB])?";
+	Pattern seekV1Pattern;
 
 	String acceptSeekString = "^Accept (\\d+)";
 	Pattern acceptSeekPattern;
@@ -125,9 +121,6 @@ public class Client extends Thread {
 	
 	String shoutRoomString = "^ShoutRoom ([^\n\r\\s]{1,64}) ([^\n\r]{1,256})";
 	Pattern shoutRoomPattern;
-	
-	//String createRoomString = "CreateRoom ([^\n\r\\s]{4,15})";
-	//Pattern createRoomPattern;
 	
 	String joinRoomString = "^JoinRoom ([^\n\r\\s]{1,64})";
 	Pattern joinRoomPattern;
@@ -189,8 +182,9 @@ public class Client extends Thread {
 		removeDrawPattern = Pattern.compile(removeDrawString);
 		resignPattern = Pattern.compile(resignString);
 		wrongRegisterPattern = Pattern.compile(wrongRegisterString);
-		seekPattern = Pattern.compile(seekString);
-		oldSeekPattern = Pattern.compile(oldSeekString);
+		seekV3Pattern = Pattern.compile(seekV3String);
+		seekV2Pattern = Pattern.compile(seekV2String);
+		seekV1Pattern = Pattern.compile(seekV1String);
 		acceptSeekPattern = Pattern.compile(acceptSeekString);
 		listPattern = Pattern.compile(listString);
 		gameListPattern = Pattern.compile(gameListString);
@@ -200,7 +194,6 @@ public class Client extends Thread {
 		getSqStatePattern = Pattern.compile(getSqStateString);
 		shoutPattern = Pattern.compile(shoutString);
 		shoutRoomPattern = Pattern.compile(shoutRoomString);
-		//createRoomPattern = Pattern.compile(createRoomString);
 		joinRoomPattern = Pattern.compile(joinRoomString);
 		leaveRoomPattern = Pattern.compile(leaveRoomString);
 		tellPattern = Pattern.compile(tellString);
@@ -220,14 +213,6 @@ public class Client extends Thread {
 		clientConnections.add(this);
 		spectating = new HashSet<>();
 		chatRooms = new HashSet<>();
-		/*
-		try{
-			Log("Connected "+websocket.socket.getInetAddress());
-		}
-		catch(Throwable t){
-			
-		}
-		*/
 	}
 
 	void sendNOK() {
@@ -242,11 +227,14 @@ public class Client extends Thread {
 	void sendCmdReply(String st) {
 		sendWithoutLogging("CmdReply "+st);
 	}
-	
+
+	void sendSudoReply(String st) {
+		sendWithoutLogging("sudoReply "+st);
+	}
+
 	void sendWithoutLogging(String st) {
 		websocket.send(st);
 	}
-	
 
 	void removeSeeks() {
 		Seek.seekStuffLock.lock();
@@ -271,14 +259,6 @@ public class Client extends Thread {
 		for(Client c: clientConnections){
 			c.sendWithoutLogging(msg);
 		}
-		/*
-		new Thread() {
-			@Override
-			public void run() {
-
-			}
-		}.start();
-		*/
 	}
 	
 	static void sendAllOnline(final String msg) {
@@ -287,14 +267,6 @@ public class Client extends Thread {
 				c.sendWithoutLogging(msg);
 			}
 		}
-		/*
-		new Thread() {
-			@Override
-			public void run() {
-
-			}
-		}.start();
-		*/
 	}
 
 	void clientQuit() throws IOException {
@@ -311,8 +283,6 @@ public class Client extends Thread {
 			removeSeeks();
 			removeFromAllRooms();
 			unspectateAll();
-	//		if(game!=null)
-	//			Game.removeGame(game);
 
 			player.loggedOut();
 			sendAllOnline("Online "+onlineClients.decrementAndGet());
@@ -328,15 +298,6 @@ public class Client extends Thread {
 	
 	void disconnect() {
 		websocket.kill(202);
-		/*
-		try {
-			//clientReader.close();
-			
-			socket.close();
-		} catch (IOException ex) {
-			Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-		}
-		*/
 	}
 
 	@Override
@@ -444,8 +405,6 @@ public class Client extends Thread {
 
 									if(!tplayer.authenticate(pass)) {
 										send("Authentication failure");
-	//								} else if(tplayer.isLoggedIn()) {
-	//									send("You're already logged in");
 									} else {
 										if(tplayer.isLoggedIn()) {
 											Client oldClient = tplayer.getClient();
@@ -458,13 +417,14 @@ public class Client extends Thread {
 												Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
 											}
 										}
-										
+
 										player = tplayer;
 
 										send("Welcome "+player.getName()+"!");
-										
+										if(player.isAdmin() || player.isMod()){
+											send("Is Mod");
+										}
 										player.login(this);
-										Log("Player logged in");
 										
 										Seek.registerListener(this);
 										Game.registerGameListListener(player);
@@ -544,8 +504,48 @@ public class Client extends Thread {
 						Seek.sendListTo(this);
 
 					}
-					//Seek a game
-					else if (game==null && (m = seekPattern.matcher(temp)).find()) {
+					//Seek a game V3
+					else if (game==null && (m = seekV3Pattern.matcher(temp)).find()) {
+						Seek.seekStuffLock.lock();
+						try{
+							if (seek != null) {
+								Seek.removeSeek(seek.no);
+							}
+							int no = Integer.parseInt(m.group(1));
+							if(no == 0) {
+								Log("Seek remove");
+								seek = null;
+							} else {
+								Seek.COLOR clr = Seek.COLOR.ANY;
+
+								if("W".equals(m.group(4)))
+									clr = Seek.COLOR.WHITE;
+								else if("B".equals(m.group(4)))
+									clr = Seek.COLOR.BLACK;
+								seek = Seek.newSeek(
+										this,
+										Integer.parseInt(m.group(1)),
+										Integer.parseInt(m.group(2)),
+										Integer.parseInt(m.group(3)),
+										clr,
+										Integer.parseInt(m.group(5)),
+										Integer.parseInt(m.group(6)),
+										Integer.parseInt(m.group(7)),
+										Integer.parseInt(m.group(8)),
+										Integer.parseInt(m.group(9)),
+										Integer.parseInt(m.group(10)),
+										Integer.parseInt(m.group(11)),
+										m.group(12)
+								);
+								Log("Seek "+seek.boardSize);
+							}
+						}
+						finally{
+							Seek.seekStuffLock.unlock();
+						}
+					}
+					//Seek a game V2
+					else if (game==null && (m = seekV2Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
 							if (seek != null) {
@@ -563,17 +563,19 @@ public class Client extends Thread {
 								else if("B".equals(m.group(4)))
 									clr = Seek.COLOR.BLACK;
 								seek = Seek.newSeek(
-									this
-									,Integer.parseInt(m.group(1))
-									,Integer.parseInt(m.group(2))
-									,Integer.parseInt(m.group(3))
-									,clr
-									,Integer.parseInt(m.group(5))
-									,Integer.parseInt(m.group(6))
-									,Integer.parseInt(m.group(7))
-									,Integer.parseInt(m.group(8))
-									,Integer.parseInt(m.group(9))
-									,m.group(10)
+									this,
+									Integer.parseInt(m.group(1)),
+									Integer.parseInt(m.group(2)),
+									Integer.parseInt(m.group(3)),
+									clr,
+									Integer.parseInt(m.group(5)),
+									Integer.parseInt(m.group(6)),
+									Integer.parseInt(m.group(7)),
+									Integer.parseInt(m.group(8)),
+									Integer.parseInt(m.group(9)),
+									0,
+									0,
+									m.group(10)
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -582,8 +584,8 @@ public class Client extends Thread {
 							Seek.seekStuffLock.unlock();
 						}
 					}
-					//Seek a game
-					else if (game==null && (m = oldSeekPattern.matcher(temp)).find()) {
+					//Seek a game V1
+					else if (game==null && (m = seekV1Pattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
 						try{
 							if (seek != null) {
@@ -613,17 +615,19 @@ public class Client extends Thread {
 								}
 									
 								seek = Seek.newSeek(
-									this
-									,Integer.parseInt(m.group(1))
-									,Integer.parseInt(m.group(2))
-									,Integer.parseInt(m.group(3))
-									,clr
-									,0
-									,tilesCount
-									,capstonesCount
-									,0
-									,0
-									,""
+									this,
+									Integer.parseInt(m.group(1)),
+									Integer.parseInt(m.group(2)),
+									Integer.parseInt(m.group(3)),
+									clr,
+									0,
+									tilesCount,
+									capstonesCount,
+									0,
+									0,
+									0,
+									0,
+									""
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -649,8 +653,8 @@ public class Client extends Thread {
 								unspectateAll();
 								otherClient.unspectateAll();
 								
-								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament);
-								game.gamelock.lock();
+								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
+								game.gameLock.lock();
 								try{
 									Game.addGame(game);
 									
@@ -658,12 +662,12 @@ public class Client extends Thread {
 									otherClient.player.setGame(game);
 									
 									String msg = "Game Start " + game.no +" "+sz+" "+game.white.getName()+" vs "+game.black.getName();
-									String msg2=time+" "+sk.komi+" "+sk.pieces+" "+sk.capstones;
+									String msg2 = time + " " + sk.komi + " " + sk.pieces + " " + sk.capstones + " " + sk.triggerMove + " " + sk.timeAmount;
 									send(msg+" "+((game.white==player)?"white":"black")+" "+msg2);
 									otherClient.send(msg+" "+((game.white==otherClient.player)?"white":"black")+" "+msg2);
 								}
 								finally{
-									game.gamelock.unlock();
+									game.gameLock.unlock();
 								}
 							} else {
 								sendNOK();
@@ -675,7 +679,7 @@ public class Client extends Thread {
 					}
 					//Handle place move
 					else if (game != null && (m = placePattern.matcher(temp)).find() && game.no == Integer.parseInt(m.group(1))) {
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							Status st = game.placeMove(player, m.group(2).charAt(0), Integer.parseInt(m.group(3)), m.group(4) != null, m.group(5)!=null);
 							if(st.isOk()){
@@ -693,7 +697,7 @@ public class Client extends Thread {
 							}
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Handle move move
@@ -702,7 +706,7 @@ public class Client extends Thread {
 						int argsint[] = new int[args.length-1];
 						for(int i=1;i<args.length;i++)
 							argsint[i-1] = Integer.parseInt(args[i]);
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							Status st = game.moveMove(player, m.group(2).charAt(0), Integer.parseInt(m.group(3)), m.group(4).charAt(0), Integer.parseInt(m.group(5)), argsint);
 							if(st.isOk()){
@@ -720,7 +724,7 @@ public class Client extends Thread {
 							}
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Handle undo offer
@@ -735,7 +739,7 @@ public class Client extends Thread {
 					}
 					//Handle draw offer
 					else if (game!=null && (m = drawPattern.matcher(temp)).find() && game.no == Integer.parseInt(m.group(1))) {
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							game.draw(player);
 							Player otherPlayer = (game.white==player)?game.black:game.white;
@@ -748,7 +752,7 @@ public class Client extends Thread {
 							sendWithoutLogging("OK");
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Handle removing draw offer
@@ -758,7 +762,7 @@ public class Client extends Thread {
 					}
 					//Handle resignation
 					else if (game!=null && (m = resignPattern.matcher(temp)).find() && game.no == Integer.parseInt(m.group(1))) {
-						game.gamelock.lock();
+						game.gameLock.lock();
 						try{
 							game.resign(player);
 							Player otherPlayer = (game.white==player)?game.black:game.white;
@@ -768,7 +772,7 @@ public class Client extends Thread {
 							otherPlayer.removeGame();
 						}
 						finally{
-							game.gamelock.unlock();
+							game.gameLock.unlock();
 						}
 					}
 					//Show game state
@@ -787,13 +791,13 @@ public class Client extends Thread {
 					else if ((m=observePattern.matcher(temp)).find()){
 						game = Game.games.get(Integer.parseInt(m.group(1)));
 						if(game!=null){
-							game.gamelock.lock();
+							game.gameLock.lock();
 							try{
 								spectating.add(game);
 								game.newSpectator(player);
 							}
 							finally{
-								game.gamelock.unlock();
+								game.gameLock.unlock();
 							}
 						} else
 							sendNOK();
@@ -802,14 +806,14 @@ public class Client extends Thread {
 					else if ((m=unobservePattern.matcher(temp)).find()){
 						game = Game.games.get(Integer.parseInt(m.group(1)));
 						if(game!=null){
-							game.gamelock.lock();
+							game.gameLock.lock();
 							try{
 								spectating.remove(game);
 								game.unSpectate(player);
 								sendWithoutLogging("OK");
 							}
 							finally{
-								game.gamelock.unlock();
+								game.gameLock.unlock();
 							}
 						} else
 							sendNOK();
@@ -901,106 +905,103 @@ public class Client extends Thread {
 	
 	//this has more rights than p
 	boolean moreRights(Player p) {
-		//no one has rights over me, not even me
-		if(p.getName().equals("kakaburra"))
-			return false;
-		
-		//i have all the rights
-		if(player.getName().equals("kakaburra"))
-			return true;
-		
 		//if i am mod and other is not mod
-		if(player.isMod() && !p.isMod())
+		if(player.isMod() && !p.isMod() || player.isAdmin())
 			return true;
 		
 		return false;
 	}
 	
 	void sudoHandler(String msg) {
-		if(!player.isMod() && !player.getName().equals("kakaburra")) {
+		if(!player.isMod() && !player.isAdmin()) {
 			sendNOK();
 			return;
 		}
 		
-		sendCmdReply("> "+msg);
+		sendSudoReply("> "+msg);
 		
 		Matcher m;
-		
+		// Un Gag player
 		if((m=unGagPattern.matcher(msg)).find()) {
 			String name = m.group(1);
 			Player p = Player.players.get(name);
 			if(p == null) {
-				sendCmdReply("No such player");
+				sendSudoReply("No such player");
 				return;
 			}
 			
 			if(!moreRights(p)) {
-				sendCmdReply("You dont have rights");
+				sendSudoReply("You dont have rights");
 				return;
 			}
 			
 			p.unGag();
-			sendCmdReply(p.getName()+" ungagged");
+			sendSudoReply(p.getName()+" ungagged");
 		}
+		// Gag player
 		else if((m=gagPattern.matcher(msg)).find()) {
 			String name = m.group(1);
 			Player p = Player.players.get(name);
 			if(p == null) {
-				sendCmdReply("No such player");
+				sendSudoReply("No such player");
 				return;
 			}
 			
 			if(!moreRights(p)) {
-				sendCmdReply("You dont have rights");
+				sendSudoReply("You don't have rights");
 				return;
 			}
 			
 			p.gag();
-			sendCmdReply(p.getName()+" gagged");
+			sendSudoReply(p.getName()+" gagged");
 		}
+		// kick player
 		else if((m=kickPattern.matcher(msg)).find()) {
 			String name = m.group(1);
 			Player p = Player.players.get(name);
 			if(p == null) {
-				sendCmdReply("No such player");
+				sendSudoReply("No such player");
 				return;
 			}
 			
 			if(!moreRights(p)) {
-				sendCmdReply("You dont have rights");
+				sendSudoReply("You dont have rights");
 				return;
 			}
 			
 			Client c = p.getClient();
 			if(c == null) {
-				sendCmdReply("Player not logged in");
+				sendSudoReply("Player not logged in");
 				return;
 			}
 			
 			c.disconnect();
-			sendCmdReply(p.getName()+" kicked");
+			sendSudoReply(p.getName()+" kicked");
 			
 		}
+		// list commands
 		else if((m=listCmdPattern.matcher(msg)).find()) {
 			String var = m.group(1);
+			// return gag list
 			if("gag".equals(var)) {
 				String res="[";
 				for(Player p: Player.gagList)
 					res += p.getName()+", ";
 				
-				sendCmdReply(res+"]");
+				sendSudoReply(res+"]");
 			}
+			// return mod list
 			else if ("mod".equals(var)) {
 				String res = "[";
 				for(Player p: Player.modList)
 					res += p.getName()+", ";
 				
-				sendCmdReply(res+"]");
+				sendSudoReply(res+"]");
 			}
 			else {
-				//previliged commands - only for me
-				if(!player.getName().equals("kakaburra")) {
-					sendCmdReply("command not found");
+				// privileged commands - only for admins
+				if(!player.isAdmin()) {
+					sendSudoReply("command not found");
 					return;
 				}
 				
@@ -1010,38 +1011,42 @@ public class Client extends Thread {
 						if(c.player != null)
 							res += c.player.getName()+", ";
 					}
-					sendCmdReply(res+"]");
+					sendSudoReply(res+"]");
 				}
 			}
 		}
 		else {
-			//previliged commands - only for me
-			if(!player.getName().equals("kakaburra")) {
-				sendCmdReply("command not found");
+			// privileged commands - only for admin
+			if(!player.isAdmin()) {
+				sendSudoReply("command not found");
 				return;
 			}
-
+			// only admins can add mods
 			if((m=modPattern.matcher(msg)).find()) {
 				String name = m.group(1);
 				System.out.println("here "+name+" "+msg);
 				Player p = Player.players.get(name);
 				if(p == null) {
-					sendCmdReply("No such player");
+					sendSudoReply("No such player");
 					return;
 				}
 				p.setMod();
-				sendCmdReply("Added "+p.getName()+" as moderator");
+				p.setModInDB(name, 1);
+				sendSudoReply("Added "+p.getName()+" as moderator");
 			}
+			// Remove mod from list
 			else if((m=unModPattern.matcher(msg)).find()) {
 				String name = m.group(1);
 				Player p = Player.players.get(name);
 				if(p == null) {
-					sendCmdReply("No such player");
+					sendSudoReply("No such player");
 					return;
 				}
 				p.unMod();
-				sendCmdReply("Removed "+p.getName()+" as moderator");
+				p.setModInDB(name, 0);
+				sendSudoReply("Removed "+p.getName()+" as moderator");
 			}
+			// Admin set password for user
 			else if((m=setPattern.matcher(msg)).find()) {
 				String param = m.group(1);
 				String name = m.group(2);
@@ -1049,12 +1054,12 @@ public class Client extends Thread {
 				
 				Player p = Player.players.get(name);
 				if(p == null) {
-					sendCmdReply("No such player");
+					sendSudoReply("No such player");
 					return;
 				}
 				if(param.equals("password")) {
 					p.setPassword(value);
-					sendCmdReply("Password set");
+					sendSudoReply("Password set");
 				}
 			}
 			else if((m=broadcastPattern.matcher(msg)).find()) {
