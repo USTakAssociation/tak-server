@@ -639,10 +639,20 @@ public class Client extends Thread {
 					//Accept a seek
 					else if (game==null && (m = acceptSeekPattern.matcher(temp)).find()) {
 						Seek.seekStuffLock.lock();
+						Log("Entering ACCEPT SEEK client="+ this.getName());
 						try{
 							Seek sk = Seek.seeks.get(Integer.parseInt(m.group(1)));
+							if (sk != null && sk.client == null) { // Tournament Seek
+								Log("Assigning client "+ this.getName() +" to tournament seek");
+								removeSeeks(); // remove old seek of client
+								Seek.removeSeek(sk.no);
+								sk.client = this;
+								seek = Seek.newSeek(sk);
 
-							if (sk != null && game == null && sk.client.player.getGame() == null && sk!=seek && (sk.opponent.toLowerCase().equals(player.getName().toLowerCase()) || sk.opponent.equals(""))) {
+								sendNOK(); // Otherwise the UI will think they joined the game
+							}
+							else if (sk != null && game == null && sk.client.player.getGame() == null && sk!=seek && (sk.opponent.toLowerCase().equals(player.getName().toLowerCase()) || sk.opponent.equals(""))) {
+								Log("Player joining game" + this.getName());
 								removeSeeks();
 
 								Client otherClient = sk.client;

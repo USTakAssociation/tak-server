@@ -39,8 +39,9 @@ cp properties.xml ./target
 cp message ./target
 ```
 
-Configure `portws` and `db-path` in `./target/properties.xml`:
+Configure `porthttp`, `portws` and `db-path` in `./target/properties.xml`:
 ```xml
+  <porthttp>10001</porthttp>
   <portws>9999</portws>
   <db-path></db-path>
 ```
@@ -52,6 +53,17 @@ java -jar ./takserver-jar-with-dependencies.jar
 ```
 
 If you want to run the app from `./` via `java -jar ./target/takserver-jar-with-dependencies.jar` then `./properties.xml` will be used and you may need to set `<db-path>./target/</db-path>`.
+
+## Rest API for PNT
+A http server is running on `porthttp`, allowing the creation of tournament seeks.
+
+Details need to be filled in here. Until then, please see [TakServer.java](src\main\java\tak\TakServer.java) for details.
+
+### API
+||URL|Comment|
+|-|-|-|
+|PUT|/api/v1/seeks|Create a seek, body should be a [SeekDto](src\main\java\tak\SeekDto.java) except for the id|
+|GET|/api/v1/seeks|Returns a list of all currently existing [seeks](src\main\java\tak\SeekDto.java)|
 
 ## Server API
 

@@ -81,6 +81,7 @@ public class Settings {
 		Element element = (Element)node;
 		TakServer.port = Integer.parseInt(element.getElementsByTagName("port").item(0).getTextContent());
 		TakServer.portws = Integer.parseInt(element.getElementsByTagName("portws").item(0).getTextContent());
+		TakServer.portHttp = Integer.parseInt(element.getElementsByTagName("porthttp").item(0).getTextContent());
 		Database.dbPath = element.getElementsByTagName("db-path").item(0).getTextContent();
 	}
 }
