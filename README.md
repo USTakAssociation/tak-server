@@ -31,7 +31,7 @@ mvn package
 Create the sqlite databases
 ```
 echo "CREATE TABLE players (id INT PRIMARY_KEY, name VARCHAR(20), password VARCHAR(50), email VARCHAR(50), r4 INT, r5 INT,r6 INT, r7 INT,r8 INT, rating real default 1000, boost real default 750, ratedgames int default 0, maxrating real default 1000, ratingage real default 0, ratingbase int default 0, unrated int default 0, isbot int default 0, fatigue text default '{}');" | sqlite3 target/players.db
-echo "CREATE TABLE games (id INTEGER PRIMARY KEY, date INT, size INT, player_white VARCHAR(20), player_black VARCHAR(20), notation TEXT, result VARCAR(10), timertime INT DEFAULT 0, timerinc INT DEFAULT 0, rating_white int default 1000, rating_black int default 1000, unrated int default 0, tournament int default 0, komi int default 0, pieces int default -1, capstones int default -1, rating_change_white int default 0, rating_change_black int default 0);" | sqlite3 target/games.db
+echo "CREATE TABLE games (id INTEGER PRIMARY KEY, date INT, size INT, player_white VARCHAR(20), player_black VARCHAR(20), notation TEXT, result VARCAR(10), timertime INT DEFAULT 0, timerinc INT DEFAULT 0, rating_white int default 1000, rating_black int default 1000, unrated int default 0, tournament int default 0, komi int default 0, pieces int default -1, capstones int default -1, rating_change_white int default 0, rating_change_black int default 0, extra_time_amount int default 0, extra_time_trigger int default 0);" | sqlite3 target/games.db
 ```
 copy the properties and message to the target
 ```
@@ -39,10 +39,19 @@ cp properties.xml ./target
 cp message ./target
 ```
 
+Configure `portws` and `db-path` in `./target/properties.xml`:
+```xml
+  <portws>9999</portws>
+  <db-path></db-path>
+```
+
 Finaly run the app
 ```
-java -jar ./target/takserver-jar-with-dependencies.jar
+cd ./target
+java -jar ./takserver-jar-with-dependencies.jar
 ```
+
+If you want to run the app from `./` via `java -jar ./target/takserver-jar-with-dependencies.jar` then `./properties.xml` will be used and you may need to set `<db-path>./target/</db-path>`.
 
 ## Server API
 
