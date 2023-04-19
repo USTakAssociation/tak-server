@@ -6,7 +6,6 @@
 package tak;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import static tak.Game.DEFAULT_SIZE;
@@ -40,10 +39,10 @@ public class Seek {
 	static Map<Integer, Seek> seeks = new ConcurrentHashMap<>();
 	static ConcurrentHashSet<Client> seekListeners = new ConcurrentHashSet<>();
 	
-	static Seek newSeek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
+	static Seek newSeek(Client client, int boardSize, int timeContingent, int timeIncrement, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
 		seekStuffLock.lock();
 		try{
-			Seek sk = new Seek(c, b, t, i, clr, komi, pieces, capstones, unrated, tournament, triggerMove, timeAmount, opponent);
+			Seek sk = new Seek(client, boardSize, timeContingent, timeIncrement, clr, komi, pieces, capstones, unrated, tournament, triggerMove, timeAmount, opponent);
 			System.out.println("Print Seek " + sk.toString());
 			addSeek(sk);
 			return sk;
@@ -53,13 +52,13 @@ public class Seek {
 		}
 	}
 	
-	Seek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
+	Seek(Client client, int boardSize, int timeContingent, int timeIncrement, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
 		seekStuffLock.lock();
 		try{
-			client = c;
+			this.client = client;
 			no = seekNo.incrementAndGet();
-			time = t;
-			incr = i;
+			time = timeContingent;
+			incr = timeIncrement;
 			color = clr;
 			this.komi = Math.min(komi,8);
 			this.pieces = Math.max(Math.min(pieces,80),10);
@@ -70,9 +69,9 @@ public class Seek {
 			this.timeAmount = timeAmount;
 			this.opponent = opponent;
 
-			if (b < 3 || b > 8)
-				b = DEFAULT_SIZE;
-			boardSize = b;
+			if (boardSize < 3 || boardSize > 8)
+				boardSize = DEFAULT_SIZE;
+			this.boardSize = boardSize;
 		}
 		finally{
 			seekStuffLock.unlock();
