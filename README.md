@@ -39,12 +39,7 @@ cp properties.xml ./target
 cp message ./target
 ```
 
-Configure `porthttp`, `portws` and `db-path` in `./target/properties.xml`:
-```xml
-  <porthttp>10001</porthttp>
-  <portws>9999</portws>
-  <db-path></db-path>
-```
+Configure `porthttp`, `portws` and `db-path` in `./target/properties.xml` to your liking.
 
 Finaly run the app
 ```
@@ -67,11 +62,17 @@ Details need to be filled in here. Until then, please see [TakServer.java](src\m
 
 ## Server API
 
-Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on port 9999 for encrypted and port 10000 which will not be encrypted.
+|Environment|Telnet `port`|Websocket `portws`|HTTP `porthttp`|
+|-|-|-|-|
+|Production | 10000 | 9999 | 9998|
+|Beta | 10002 | 10001 | 10003 |
+|Local dev | 10000 | 9999 | 9998 |
+
+Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on `portws` for encrypted communication or telnet on `port` which will not be encrypted.
 <br>
 You can find the playtak UI client github here [playtak-ui](https://github.com/USTakAssociation/playtak-ui)
 
-** You can telnet on port 10000 to test the commands.**
+**You can telnet on port `10000` to test the commands.**
 
 Typical communication is like below
 * Connect to server via a websocket. Server gives welcome message
