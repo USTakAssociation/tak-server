@@ -21,8 +21,8 @@
   
   <server-settings>
     <port>10000</port>
-    <portws>9998</portws>
-    <porthttp>10001</porthttp>
-    <db-path></db-path>
+    <portws>9999</portws>
+    <porthttp>9998</porthttp>
+    <db-path>./</db-path>
   </server-settings>
 </playtak.com>
