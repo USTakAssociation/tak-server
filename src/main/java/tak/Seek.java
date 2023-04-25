@@ -205,21 +205,21 @@ public class Seek {
 			String playerName = client.player.getName();
 
 			return String.join(" ", new String[]{
-				Integer.toString(no),
-				playerName,
-				Integer.toString(boardSize),
-				Integer.toString(time),
-				Integer.toString(incr),
-				clr,
-				Integer.toString(komi),
-				Integer.toString(pieces),
-				Integer.toString(capstones),
-				Integer.toString(unrated),
-				Integer.toString(tournament),
-				Integer.toString(triggerMove),
-				Integer.toString(timeAmount),
-				opponent
-		});
+          Integer.toString(no),
+          playerName,
+          Integer.toString(boardSize),
+          Integer.toString(time),
+          Integer.toString(incr),
+          clr,
+          Integer.toString(komi),
+          Integer.toString(pieces),
+          Integer.toString(capstones),
+          Integer.toString(unrated),
+          Integer.toString(tournament),
+          Integer.toString(triggerMove),
+          Integer.toString(timeAmount),
+          opponent
+      });
 		}
 		finally{
 			seekStuffLock.unlock();

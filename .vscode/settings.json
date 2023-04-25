@@ -1,4 +1,6 @@
 {
   "java.debug.settings.hotCodeReplace": "auto",
   "java.configuration.updateBuildConfiguration": "automatic",
+  "editor.tabSize": 2,
+  "editor.detectIndentation": false,
 }
