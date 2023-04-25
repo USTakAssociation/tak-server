@@ -8,27 +8,35 @@ import lombok.extern.jackson.Jacksonized;
 @Builder
 @Jacksonized
 public class SeekDto {
-	public int id;
+  public int id;
   public String creator;
-	public String opponent;
+  public String opponent;
   /** Seconds */
-	public int timeContingent;
+  public int timeContingent;
   /** Seconds */
-	public int timeIncrement;
-	public int extraTimeTriggerMove;
+  public int timeIncrement;
+  public int extraTimeTriggerMove;
   /** Seconds */
-	public int extraTimeAmount;
-	/** Double of actual komi */
-	public float komi;
+  public int extraTimeAmount;
+  /** Double of actual komi */
+  public float komi;
 
-	public int boardSize;
-	public int capstones;
-	public int pieces;
-	public boolean unrated;
-	public boolean tournament;
-	public Seek.COLOR color;
+  public int boardSize;
+  public int capstones;
+  public int pieces;
+  public boolean unrated;
+  public boolean tournament;
+  public Seek.COLOR color;
 
-	public int tournamentInt() { return tournament ? 1 : 0; }
-	public int unratedInt() { return unrated ? 1 : 0; }
-	public int komiInt() { return Math.round(komi*2); }
+  public int tournamentInt() {
+    return tournament ? 1 : 0;
+  }
+
+  public int unratedInt() {
+    return unrated ? 1 : 0;
+  }
+
+  public int komiInt() {
+    return Math.round(komi * 2);
+  }
 }
