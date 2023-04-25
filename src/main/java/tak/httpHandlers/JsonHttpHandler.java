@@ -78,10 +78,11 @@ public abstract class JsonHttpHandler implements HttpHandler {
   }
 
   private void send(HttpExchange httpExchange, int httpStatusCode, String response) throws IOException {
-    httpExchange.sendResponseHeaders(httpStatusCode, response.length());
     var headers = httpExchange.getResponseHeaders();
-    headers.add("content-type", "application/json");
-
+    headers.set("Content-Type", "application/json");
+    
+    // sendResponseHeaders must be invoked after headers have been added
+    httpExchange.sendResponseHeaders(httpStatusCode, response.length());
     OutputStream os = httpExchange.getResponseBody();
     os.write(response.getBytes());
     os.close();
