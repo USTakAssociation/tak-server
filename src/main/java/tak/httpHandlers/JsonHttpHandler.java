@@ -72,7 +72,7 @@ public abstract class JsonHttpHandler implements HttpHandler {
       String response = jsonMapper.writeValueAsString(result);
       send(httpExchange, HttpURLConnection.HTTP_OK, response);
     } catch (Exception ex) {
-      logger.log(Level.WARNING, "Failed serialize the response data", ex);
+      logger.log(Level.WARNING, "Failed to serialize the response", ex);
       send(httpExchange, HttpURLConnection.HTTP_INTERNAL_ERROR, "Failed to serialize response");
     }
   }

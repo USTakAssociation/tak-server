@@ -299,7 +299,11 @@ public class Player {
 		}
 		return np;
 	}
-	
+
+	public static Player getByName(final String name) {
+		return players.getOrDefault(name, null);
+	}
+
 	@Override
 	public String toString() {
 		return name+" "+password+" "+email+" "+r4+" "+r5+" "+r6+" "+r7+" "+r8;

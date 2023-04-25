@@ -42,15 +42,13 @@ public class Seek {
 	static ConcurrentHashSet<Client> seekListeners = new ConcurrentHashSet<>();
 	
 	/** Creates a new seek with the same settings as the given seek, but with a new `no` */
-	public static Seek newSeek(SeekDto seek) {
-		return newSeek(null,
+	public static Seek newSeek(Client client, SeekDto seek) {
+		return newSeek(client,
 				seek.boardSize, seek.timeContingent, seek.timeIncrement, seek.color, seek.komiInt(), seek.pieces,
 				seek.capstones, seek.unratedInt(), seek.tournamentInt(), seek.extraTimeTriggerMove, seek.extraTimeAmount,
 				seek.opponent);
 	}
-	public static Seek newSeek(Seek seek) {
-		return newSeek(seek.client, seek.boardSize, seek.time, seek.incr, seek.color, seek.komi, seek.pieces, seek.capstones, seek.unrated, seek.tournament, seek.triggerMove, seek.timeAmount, seek.opponent);
-	}
+
 	public static Seek newSeek(Client client, int boardSize, int timeContingent, int timeIncrement, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
 		opponent = opponent == null ? "" : opponent;
 
@@ -142,7 +140,7 @@ public class Seek {
 		try{
 			return new SeekDto(
 				no,
-				client != null ? client.getName() : null,
+				client.player.getName(),
 				opponent == "" ? null : opponent,
 				time,
 				incr,
@@ -204,8 +202,24 @@ public class Seek {
 				clr = "W";
 			else if(color == COLOR.BLACK)
 				clr = "B";
-			String playerName = client != null ? client.player.getName() : "UNCLAIMED"; // TODO nitzel: should display the other player's name here
-			return (no+" "+playerName+" " + boardSize + " " + time + " " + incr + " " + clr + " " + komi + " " + pieces + " " + capstones + " " + unrated + " " + tournament + " " + triggerMove + " " + timeAmount + " " + opponent);
+			String playerName = client.player.getName();
+
+			return String.join(" ", new String[]{
+				Integer.toString(no),
+				playerName,
+				Integer.toString(boardSize),
+				Integer.toString(time),
+				Integer.toString(incr),
+				clr,
+				Integer.toString(komi),
+				Integer.toString(pieces),
+				Integer.toString(capstones),
+				Integer.toString(unrated),
+				Integer.toString(tournament),
+				Integer.toString(triggerMove),
+				Integer.toString(timeAmount),
+				opponent
+		});
 		}
 		finally{
 			seekStuffLock.unlock();
