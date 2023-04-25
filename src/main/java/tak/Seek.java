@@ -140,22 +140,22 @@ public class Seek {
 	public SeekDto toDto() {
 		seekStuffLock.lock();
 		try{
-			return new SeekDto(
-				no,
-				client.player.getName(),
-				opponent == "" ? null : opponent,
-				time,
-				incr,
-				triggerMove,
-				timeAmount,
-				komi,
-				boardSize,
-				pieces,
-				capstones,
-				unrated > 0,
-				tournament > 0,
-				color
-			);
+			return SeekDto.builder()
+				.id(no)
+				.creator(client.player.getName())
+				.opponent(opponent == "" ? null : opponent)
+				.color(color)
+				.komi(komi / 2.f)
+				.boardSize(boardSize)
+				.capstones(capstones)
+				.pieces(pieces)
+				.unrated(unrated > 0)
+				.tournament(tournament > 0)
+				.timeContingent(time)
+				.timeIncrement(incr)
+				.extraTimeAmount(timeAmount)
+				.extraTimeTriggerMove(triggerMove)
+				.build();
 		}
 		finally{
 			seekStuffLock.unlock();
