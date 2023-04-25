@@ -54,11 +54,11 @@ A http server is running on `porthttp`, allowing the creation of tournament seek
 
 Details need to be filled in here. Until then, please see [TakServer.java](src\main\java\tak\TakServer.java) for details.
 
-### API
-||URL|Comment|
-|-|-|-|
-|PUT|/api/v1/seeks|Create a seek, body should be a [SeekDto](src\main\java\tak\SeekDto.java) except for the id|
-|GET|/api/v1/seeks|Returns a list of all currently existing [seeks](src\main\java\tak\SeekDto.java)|
+### HTTP API
+||URL|Body|Return|Comment|
+|-|-|-|-|-|
+|PUT|/api/v1/seeks|[SeekDto](src\main\java\tak\SeekDto.java) without `id`|[SeekDto](src\main\java\tak\SeekDto.java)|Creates a seek|
+|GET|/api/v1/seeks|n/a|[List\[SeekDto\]](src\main\java\tak\SeekDto.java)|Returns list of existing seeks|
 
 ## Server API
 
