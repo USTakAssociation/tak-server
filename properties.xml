@@ -23,6 +23,6 @@
     <port>10000</port>
     <portws>9999</portws>
     <porthttp>9998</porthttp>
-    <db-path>./</db-path>
+    <db-path>./target/</db-path>
   </server-settings>
 </playtak.com>
