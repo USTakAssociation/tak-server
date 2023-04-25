@@ -105,6 +105,8 @@ public class Seek {
 	static void addSeek(Seek sk) {
 		seekStuffLock.lock();
 		try{
+			sk.client.removeSeeks();
+			sk.client.seek = sk;
 			Seek.seeks.put(sk.no, sk);
 			updateListeners("new " + sk.toString());
 		}

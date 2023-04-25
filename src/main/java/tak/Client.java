@@ -240,6 +240,7 @@ public class Client extends Thread {
 		Seek.seekStuffLock.lock();
 		try{
 			if (seek != null) {
+				Log("Removing seek " + seek.no + " from player " + this.player.getName());
 				Seek.removeSeek(seek.no);
 				seek = null;
 			}
@@ -642,13 +643,12 @@ public class Client extends Thread {
 						try{
 							Seek sk = Seek.seeks.get(Integer.parseInt(m.group(1)));
 							if (sk != null && game == null && sk.client.player.getGame() == null && sk!=seek && (sk.opponent.toLowerCase().equals(player.getName().toLowerCase()) || sk.opponent.equals(""))) {
-								removeSeeks();
-
 								Client otherClient = sk.client;
 								int sz = sk.boardSize;
 								int time = sk.time;
+								
+								removeSeeks();
 								otherClient.removeSeeks();
-
 								unspectateAll();
 								otherClient.unspectateAll();
 								
