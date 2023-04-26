@@ -9,7 +9,7 @@ import com.sun.net.httpserver.HttpExchange;
 
 import tak.Player;
 import tak.Seek;
-import tak.SeekDto;
+import tak.DTOs.SeekDto;
 import tak.exceptions.FailedToCreateSeekException;
 import tak.exceptions.PlayerBusyWithGameException;
 import tak.exceptions.PlayerNotFoundException;
@@ -19,7 +19,6 @@ public class AddSeekHandler extends JsonHttpHandler {
 	@Override
 	public SeekDto PUT(HttpExchange t) throws IOException, DataFormatException, FailedToCreateSeekException {
 		try {
-
 			SeekDto seekDto = jsonMapper.readValue(t.getRequestBody(), SeekDto.class);
 			logger.log(Level.INFO, String.format("Successfully parsed DTO %s", seekDto.toString()));
 

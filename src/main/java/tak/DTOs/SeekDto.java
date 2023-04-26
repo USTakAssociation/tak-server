@@ -1,8 +1,9 @@
-package tak;
+package tak.DTOs;
 
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
+import tak.Seek;
 
 @Value
 @Builder
