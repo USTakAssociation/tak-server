@@ -7,10 +7,14 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import tak.FlowMessages.GameUpdate;
 import tak.utils.ConcurrentHashSet;
 
 /*
@@ -22,7 +26,7 @@ import tak.utils.ConcurrentHashSet;
  *
  * @author chaitu
  */
-public class Client extends Thread {
+public class Client extends Thread implements Publisher<GameUpdate> {
 
 	Websocket websocket;
 	Player player = null;
@@ -33,6 +37,7 @@ public class Client extends Thread {
 	static AtomicInteger onlineClients = new AtomicInteger(0);
 
 	static ConcurrentHashSet<Client> clientConnections = new ConcurrentHashSet<>();
+	protected ConcurrentHashSet<Subscriber<? super GameUpdate>> subscribers = new ConcurrentHashSet<>();
 
 	Seek seek = null;
 	Set<Game> spectating;
@@ -653,6 +658,11 @@ public class Client extends Thread {
 								otherClient.unspectateAll();
 								
 								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
+								notifySubscribers(GameUpdate.gameCreated(game.toDto()));
+								for(var subscriber: subscribers) {
+									game.subscribe(subscriber);
+								}
+								
 								game.gameLock.lock();
 								try{
 									Game.addGame(game);
@@ -1085,5 +1095,15 @@ public class Client extends Thread {
 			TakServer.Log(ex);
 		}
 		
+	}
+
+	@Override
+	public void subscribe(Subscriber<? super GameUpdate> subscriber) {
+		subscribers.add(subscriber);
+	}
+	protected void notifySubscribers(GameUpdate update) {
+		for (var subscriber: subscribers) {
+			subscriber.onNext(update);
+		}
 	}
 }

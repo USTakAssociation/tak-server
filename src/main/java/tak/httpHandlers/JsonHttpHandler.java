@@ -39,6 +39,7 @@ public abstract class JsonHttpHandler implements HttpHandler {
 
 	private Object deriveResult(String httpMethod, HttpExchange httpExchange)
 			throws UnsupportedOperationException, Exception {
+
 		switch (httpMethod.toUpperCase()) {
 			case "PUT":
 				return PUT(httpExchange);
@@ -57,7 +58,9 @@ public abstract class JsonHttpHandler implements HttpHandler {
 	public final void handle(HttpExchange httpExchange) throws IOException {
 		Object result;
 		try {
-			result = deriveResult(httpExchange.getRequestMethod(), httpExchange);
+			String httpMethod = httpExchange.getRequestMethod();
+			logger.info(this.getClass().getSimpleName() + " handling " + httpMethod + " " + httpExchange.getRequestURI());
+			result = deriveResult(httpMethod, httpExchange);
 		} catch (UnsupportedOperationException ex) {
 			logger.log(Level.WARNING, "Failed to handle request", ex);
 			send(httpExchange, METHOD_NOT_ALLOWED, "Operation not supported: " + ex.getMessage());
@@ -69,7 +72,13 @@ public abstract class JsonHttpHandler implements HttpHandler {
 		}
 
 		try {
-			String response = jsonMapper.writeValueAsString(result);
+			String response;
+			if (result instanceof String) {
+				response = (String)result;
+			}
+			else {
+				response = jsonMapper.writeValueAsString(result);
+			}
 			send(httpExchange, HttpURLConnection.HTTP_OK, response);
 		} catch (Exception ex) {
 			logger.log(Level.WARNING, "Failed to serialize the response", ex);

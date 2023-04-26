@@ -17,64 +17,72 @@ import java.util.logging.Logger;
 import com.sun.net.httpserver.HttpServer;
 
 import tak.httpHandlers.AddSeekHandler;
+import tak.httpHandlers.TestHandler;
 
 /**
  *
  * @author chaitu
  */
-public class TakServer extends Thread{
+public class TakServer extends Thread {
 	public static int port;
 	public static int portws;
 	public static int portHttp;
 
+	protected static Logger logger = Logger.getLogger(TakServer.class.getName());
+
 	@Override
-	public void run () {
+	public void run() {
 		ServerSocket ssocket;
 		ServerSocket wsocket;
 		HttpServer httpServer;
+		var gameUpdateBroadcaster = new GameUpdateBroadcaster();
+		new Thread(gameUpdateBroadcaster).start();
+
 		try {
 			ssocket = new ServerSocket(port);
-			System.out.println("Server running at " + port);
+			Log("Server running at " + port);
 			ssocket.setSoTimeout(70);
 			wsocket = new ServerSocket(portws);
-			System.out.println("WebSocket Server running at " + portws);
+			Log("WebSocket Server running at " + portws);
 			wsocket.setSoTimeout(70);
 
 			// HTTP Server example from https://stackoverflow.com/questions/3732109/simple-http-server-in-java-using-only-java-se-api
 			httpServer = HttpServer.create(new InetSocketAddress(portHttp), 0);
-			System.out.println("HTTPServer running at " + portHttp);
-			 // TODO: this matches `/api/v1/seeks*` but should only match exactly `/api/v1/seeks`
+			Log("HTTPServer running at " + portHttp);
+			// TODO: this matches `/api/v1/seeks*` but should only match exactly `/api/v1/seeks`
+			httpServer.createContext("/api/v1/test", new TestHandler());
 			httpServer.createContext("/api/v1/seeks", new AddSeekHandler());
 			// Enables parallel processing of requests, probably not necessary
 			httpServer.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
 			httpServer.start();
 
-			while(true) {
-				try{
+			while (true) {
+				try {
 					Date date = new Date();
-					if((date.getTime()&128)==128){
+					if ((date.getTime() & 128) == 128) {
 						Socket socket = ssocket.accept();
 						TakServer.Log("New Telnet client");
 						Client cc = new Client(new Telnet(socket));
+						cc.subscribe(gameUpdateBroadcaster);
 						cc.start();
-					}
-					else{
+					} else {
 						Socket socket = wsocket.accept();
 						TakServer.Log("New Websocket client");
 						Client cc = new Client(new Websocket(socket));
+						cc.subscribe(gameUpdateBroadcaster);
 						cc.start();
 					}
-				}
-				catch(SocketTimeoutException e){
-					
+				} catch (SocketTimeoutException e) {
+
 				}
 			}
 		} catch (IOException ex) {
-			Logger.getLogger(TakServer.class.getName()).log(Level.SEVERE, null, ex);
+			logger.log(Level.SEVERE, null, ex);
 		}
+		gameUpdateBroadcaster.stop();
 	}
-	
+
 	static void Log(Object obj) {
-		System.out.println(new Date()+"		"+obj);
+		logger.info(obj.toString());
 	}
 }

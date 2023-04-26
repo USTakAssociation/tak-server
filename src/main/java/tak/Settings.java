@@ -7,6 +7,8 @@ package tak;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilder;
@@ -23,6 +25,8 @@ import org.xml.sax.SAXException;
  * @author chaitu
  */
 public class Settings {
+	public static Logger logger = Logger.getLogger(Settings.class.getName());
+
 	public static Document doc = null;
 	public static void parse() {
 		File xmlFile = new File("properties.xml");
@@ -33,7 +37,7 @@ public class Settings {
 			doc = dBuilder.parse(xmlFile);
 			doc.getDocumentElement().normalize();
 		} catch (ParserConfigurationException | SAXException | IOException ex) {
-			Logger.getLogger(Settings.class.getName()).log(Level.SEVERE, null, ex);
+			logger.log(Level.SEVERE, null, ex);
 		}
 		
 		parseEmail();
@@ -51,7 +55,7 @@ public class Settings {
 		EMail.password = element.getElementsByTagName("password").item(0).getTextContent();
 		EMail.from = element.getElementsByTagName("from").item(0).getTextContent();
 		
-		System.out.println("from "+EMail.from+" host "+EMail.host);
+		logger.info("from "+EMail.from+" host "+EMail.host);
 	}
 	
 	private static void parseIRC() {
@@ -83,5 +87,12 @@ public class Settings {
 		TakServer.portws = Integer.parseInt(element.getElementsByTagName("portws").item(0).getTextContent());
 		TakServer.portHttp = Integer.parseInt(element.getElementsByTagName("porthttp").item(0).getTextContent());
 		Database.dbPath = element.getElementsByTagName("db-path").item(0).getTextContent();
+		try {
+			String fieldName = "event-subscriber-url";
+			GameUpdateBroadcaster.eventSubscriberUrl = new URL(element.getElementsByTagName(fieldName).item(0).getTextContent());
+		}
+		catch (MalformedURLException ex) {
+			logger.log(Level.SEVERE, "Could not parse event-subscriber-url", ex);
+		}
 	}
 }
