@@ -27,7 +27,6 @@ public class GameDto {
 	public int pieces;
 	public boolean unrated;
 	public boolean tournament;
-	public Seek.COLOR color;
 
 	/** Moves of the game, currently in Server Notation - should eventually be PTN */
 	public String[] moves;
