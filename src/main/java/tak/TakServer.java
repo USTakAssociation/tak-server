@@ -17,7 +17,6 @@ import java.util.logging.Logger;
 import com.sun.net.httpserver.HttpServer;
 
 import tak.httpHandlers.AddSeekHandler;
-import tak.httpHandlers.TestHandler;
 
 /**
  *
@@ -49,8 +48,8 @@ public class TakServer extends Thread {
 			// HTTP Server example from https://stackoverflow.com/questions/3732109/simple-http-server-in-java-using-only-java-se-api
 			httpServer = HttpServer.create(new InetSocketAddress(portHttp), 0);
 			Log("HTTPServer running at " + portHttp);
+
 			// TODO: this matches `/api/v1/seeks*` but should only match exactly `/api/v1/seeks`
-			httpServer.createContext("/api/v1/test", new TestHandler());
 			httpServer.createContext("/api/v1/seeks", new AddSeekHandler());
 			// Enables parallel processing of requests, probably not necessary
 			httpServer.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
