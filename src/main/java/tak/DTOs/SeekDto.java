@@ -1,5 +1,7 @@
 package tak.DTOs;
 
+import java.util.UUID;
+
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
@@ -10,6 +12,7 @@ import tak.Seek;
 @Jacksonized
 public class SeekDto {
 	public int id;
+	public UUID uid;
 	public String creator;
 	public String opponent;
 	/** Seconds */

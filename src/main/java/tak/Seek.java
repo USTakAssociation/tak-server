@@ -7,6 +7,7 @@ package tak;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import static tak.Game.DEFAULT_SIZE;
@@ -24,6 +25,7 @@ public class Seek {
 	Client client;
 	int boardSize;
 	int no;
+	final UUID uid;
 	int time;//time in seconds for each side
 	int incr;//increment in seconds
 	int komi;
@@ -71,6 +73,7 @@ public class Seek {
 		try{
 			this.client = client;
 			no = seekNo.incrementAndGet();
+			uid = UUID.randomUUID();
 			time = timeContingent;
 			incr = timeIncrement;
 			color = clr;
@@ -144,6 +147,7 @@ public class Seek {
 		try{
 			return SeekDto.builder()
 				.id(no)
+				.uid(uid)
 				.creator(client.player.getName())
 				.opponent(opponent == "" ? null : opponent)
 				.color(color)

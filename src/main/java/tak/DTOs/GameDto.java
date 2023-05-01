@@ -1,5 +1,7 @@
 package tak.DTOs;
 
+import java.util.UUID;
+
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
@@ -9,6 +11,8 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class GameDto {
 	public int id;
+	/** UID of the seek that started this game */
+	public UUID seekUid;
 	public String white;
 	public String black;
 	/** Seconds */

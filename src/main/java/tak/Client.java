@@ -657,7 +657,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 								unspectateAll();
 								otherClient.unspectateAll();
 								
-								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
+								game = new Game(sk.uid, player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
 								notifySubscribers(GameUpdate.gameCreated(game.toDto()));
 								for(var subscriber: subscribers) {
 									game.subscribe(subscriber);
