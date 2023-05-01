@@ -19,7 +19,6 @@ public class SeekDto {
 	public int extraTimeTriggerMove;
 	/** Seconds */
 	public int extraTimeAmount;
-	/** Double of actual komi */
 	public float komi;
 
 	public int boardSize;

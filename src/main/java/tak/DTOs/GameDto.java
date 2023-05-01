@@ -3,7 +3,6 @@ package tak.DTOs;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-import tak.Seek;
 
 @Value
 @Builder
@@ -19,7 +18,6 @@ public class GameDto {
 	public int extraTimeTriggerMove;
 	/** Seconds */
 	public int extraTimeAmount;
-	/** Double of actual komi */
 	public float komi;
 
 	public int boardSize;
