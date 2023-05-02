@@ -541,7 +541,8 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 										Integer.parseInt(m.group(9)),
 										Integer.parseInt(m.group(10)),
 										Integer.parseInt(m.group(11)),
-										m.group(12)
+										m.group(12),
+										null
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -581,7 +582,8 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 									Integer.parseInt(m.group(9)),
 									0,
 									0,
-									m.group(10)
+									m.group(10),
+									null
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -633,7 +635,8 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 									0,
 									0,
 									0,
-									""
+									"",
+									null
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -657,7 +660,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 								unspectateAll();
 								otherClient.unspectateAll();
 								
-								game = new Game(sk.uid, player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
+								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount, sk.pntId);
 								notifySubscribers(GameUpdate.gameCreated(game.toDto()));
 								for(var subscriber: subscribers) {
 									game.subscribe(subscriber);

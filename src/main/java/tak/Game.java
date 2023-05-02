@@ -19,7 +19,6 @@ import java.util.Random;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,7 +45,7 @@ public class Game implements Publisher<GameUpdate>{
 	 * The Seek-API returns this when a seek is created.
 	 * GameUpdate events can then be related to the seek.
 	 */
-	final UUID seekUid;
+	final Integer pntId;
 
 	//time in milli seconds
 	long originalTime;
@@ -260,13 +259,14 @@ public class Game implements Publisher<GameUpdate>{
 	 * @param clr: color choice of p2
 	 * @param triggerMove: move number to trigger time amount to add
 	 * @param timeAmount: amount of time to add from trigger move
+	 * @param pntId: ID of the Playtak Native Tournament game this game is related to. Use `null` if not related to PNT.
 	 */
-	Game(UUID seekUid, Player p1, Player p2, int b, int t, int i, Seek.COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount) {
+	Game(Player p1, Player p2, int b, int t, int i, Seek.COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, Integer pntId) {
 		gameLock = new ReentrantLock();
 		gameLock.lock();
 		try{
 			int rand = new Random().nextInt(2);
-			this.seekUid = seekUid;
+			this.pntId = pntId;
 			this.komi = komi;
 			tileCount = pieces;
 			capCount = capstones;
@@ -541,7 +541,7 @@ public class Game implements Publisher<GameUpdate>{
 		try{
 			return GameDto.builder()
 				.id(no)
-				.seekUid(seekUid)
+				.pntId(pntId)
 				.white(white.getName())
 				.black(black.getName())
 				.komi(komi / 2.f)
