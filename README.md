@@ -31,7 +31,7 @@ mvn package
 Create the sqlite databases
 ```
 echo "CREATE TABLE players (id INT PRIMARY_KEY, name VARCHAR(20), password VARCHAR(50), email VARCHAR(50), r4 INT, r5 INT,r6 INT, r7 INT,r8 INT, rating real default 1000, boost real default 750, ratedgames int default 0, maxrating real default 1000, ratingage real default 0, ratingbase int default 0, unrated int default 0, isbot int default 0, fatigue text default '{}');" | sqlite3 target/players.db
-echo "CREATE TABLE games (id INTEGER PRIMARY KEY, date INT, size INT, player_white VARCHAR(20), player_black VARCHAR(20), notation TEXT, result VARCAR(10), timertime INT DEFAULT 0, timerinc INT DEFAULT 0, rating_white int default 1000, rating_black int default 1000, unrated int default 0, tournament int default 0, komi int default 0, pieces int default -1, capstones int default -1, rating_change_white int default 0, rating_change_black int default 0);" | sqlite3 target/games.db
+echo "CREATE TABLE games (id INTEGER PRIMARY KEY, date INT, size INT, player_white VARCHAR(20), player_black VARCHAR(20), notation TEXT, result VARCAR(10), timertime INT DEFAULT 0, timerinc INT DEFAULT 0, rating_white int default 1000, rating_black int default 1000, unrated int default 0, tournament int default 0, komi int default 0, pieces int default -1, capstones int default -1, rating_change_white int default 0, rating_change_black int default 0, extra_time_amount int default 0, extra_time_trigger int default 0);" | sqlite3 target/games.db
 ```
 copy the properties and message to the target
 ```
@@ -39,18 +39,51 @@ cp properties.xml ./target
 cp message ./target
 ```
 
+Configure `porthttp`, `portws` and `db-path` in `./target/properties.xml` to your liking.
+
 Finaly run the app
 ```
-java -jar ./target/takserver-jar-with-dependencies.jar
+cd ./target
+java -jar ./takserver-jar-with-dependencies.jar
 ```
+
+If you want to run the app from `./` via `java -jar ./target/takserver-jar-with-dependencies.jar` then `./properties.xml` will be used and you may need to set `<db-path>./target/</db-path>`.
+
+## Rest API for PNT
+A http server is running on `porthttp`, allowing the creation of tournament seeks.
+
+Details need to be filled in here. Until then, please see [TakServer.java](./src/main/java/tak/TakServer.java) for details.
+
+### HTTP API
+||URL|Body|Return|Comment|
+|-|-|-|-|-|
+|PUT|/api/v1/seeks|[SeekDto](./src/main/java/tak/SeekDto.java) without `id`|[SeekDto](./src/main/java/tak/SeekDto.java)|Creates a seek|
+|GET|/api/v1/seeks|n/a|[List\[SeekDto\]](./src/main/java/tak/SeekDto.java)|Returns list of existing seeks|
+
+## GameUpdateBroadcaster
+The [GameUpdateBroadcaster](./src/main/java/tak/GameUpdateBroadcaster.java) reads an URL from `server-settings.event-subscriber-url` (in `properties.xml`)
+and sends `POST` requests there containing 
+```typescript
+{
+	type: "game.created"|"game.ended",
+	game: GameDto
+}
+```
+(see [GameDto](./src/main/java/tak/DTOs/GameDto.java)). If the URL could not be parsed, a `SEVERE` log message will warn about it but the Tak server will still start.
 
 ## Server API
 
-Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on port 9999 for encrypted and port 10000 which will not be encrypted.
+|Environment|Telnet `port`|Websocket `portws`|HTTP `porthttp`|
+|-|-|-|-|
+|Production | 10000 | 9999 | 9998|
+|Beta | 10002 | 10001 | 10003 |
+|Local dev | 10000 | 9999 | 9998 |
+
+Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on `portws` for encrypted communication or telnet on `port` which will not be encrypted.
 <br>
 You can find the playtak UI client github here [playtak-ui](https://github.com/USTakAssociation/playtak-ui)
 
-** You can telnet on port 10000 to test the commands.**
+**You can telnet on port `10000` to test the commands.**
 
 Typical communication is like below
 * Connect to server via a websocket. Server gives welcome message

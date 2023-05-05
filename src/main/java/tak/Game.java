@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.Random;
 import java.util.Stack;
 import java.util.Timer;
@@ -20,6 +22,9 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import tak.DTOs.GameDto;
+import tak.FlowMessages.GameUpdate;
 import tak.utils.ConcurrentHashSet;
 import java.util.concurrent.locks.*;
 
@@ -27,13 +32,20 @@ import java.util.concurrent.locks.*;
  *
  * @author chaitu
  */
-public class Game {
+public class Game implements Publisher<GameUpdate>{
 
 	Player white;
 	Player black;
 	long time;
 
 	int no;
+
+	/**
+	 * The uid of the seek that this game was created from.
+	 * The Seek-API returns this when a seek is created.
+	 * GameUpdate events can then be related to the seek.
+	 */
+	final Integer pntId;
 
 	//time in milli seconds
 	long originalTime;
@@ -54,6 +66,7 @@ public class Game {
 	boolean abandoned;
 
 	ConcurrentHashSet<Player> spectators;
+	protected ConcurrentHashSet<Subscriber<? super GameUpdate>> subscribers = new ConcurrentHashSet<>();
 
 	public enum gameS {WHITE_ROAD, BLACK_ROAD, WHITE_TILE, BLACK_TILE, DRAW,
 						WHITE, BLACK, ABORT, NONE};
@@ -246,12 +259,14 @@ public class Game {
 	 * @param clr: color choice of p2
 	 * @param triggerMove: move number to trigger time amount to add
 	 * @param timeAmount: amount of time to add from trigger move
+	 * @param pntId: ID of the Playtak Native Tournament game this game is related to. Use `null` if not related to PNT.
 	 */
-	Game(Player p1, Player p2, int b, int t, int i, Seek.COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount) {
+	Game(Player p1, Player p2, int b, int t, int i, Seek.COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, Integer pntId) {
 		gameLock = new ReentrantLock();
 		gameLock.lock();
 		try{
 			int rand = new Random().nextInt(2);
+			this.pntId = pntId;
 			this.komi = komi;
 			tileCount = pieces;
 			capCount = capstones;
@@ -514,6 +529,34 @@ public class Game {
 			sb.append(" ").append(triggerMove);
 			sb.append(" ").append(timeAmount/1000);
 			return sb.toString();
+		}
+		finally{
+			gameLock.unlock();
+		}
+	}
+
+	public GameDto toDto() {
+		gameLock.lock();
+		var result = gameStateString();
+		try{
+			return GameDto.builder()
+				.id(no)
+				.pntId(pntId)
+				.white(white.getName())
+				.black(black.getName())
+				.komi(komi / 2.f)
+				.boardSize(board.boardSize)
+				.capstones(capCount)
+				.pieces(tileCount)
+				.unrated(unrated > 0)
+				.tournament(tournament > 0)
+				.timeContingent((int)(originalTime / 1000))
+				.timeIncrement((int)(incrementTime / 1000))
+				.extraTimeAmount((int)(timeAmount / 1000))
+				.extraTimeTriggerMove(triggerMove)
+				.moves(moveList.toArray(String[]::new))
+				.result(result == "---" ? null : result)
+				.build();
 		}
 		finally{
 			gameLock.unlock();
@@ -1016,6 +1059,8 @@ public class Game {
 		sendToSpectators(msg);
 
 		saveToDB();
+
+		notifySubscribers(GameUpdate.gameEnded(this.toDto()));
 	}
 
 	private String moveListString() {
@@ -1410,6 +1455,17 @@ public class Game {
 		}
 		void reset() {
 			count = 0;
+		}
+	}
+
+	@Override
+	public void subscribe(Subscriber<? super GameUpdate> subscriber) {
+		subscribers.add(subscriber);
+	}
+	
+	protected void notifySubscribers(GameUpdate update) {
+		for (var subscriber: subscribers) {
+			subscriber.onNext(update);
 		}
 	}
 }

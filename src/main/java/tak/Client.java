@@ -7,10 +7,14 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import tak.FlowMessages.GameUpdate;
 import tak.utils.ConcurrentHashSet;
 
 /*
@@ -22,7 +26,7 @@ import tak.utils.ConcurrentHashSet;
  *
  * @author chaitu
  */
-public class Client extends Thread {
+public class Client extends Thread implements Publisher<GameUpdate> {
 
 	Websocket websocket;
 	Player player = null;
@@ -33,6 +37,7 @@ public class Client extends Thread {
 	static AtomicInteger onlineClients = new AtomicInteger(0);
 
 	static ConcurrentHashSet<Client> clientConnections = new ConcurrentHashSet<>();
+	protected ConcurrentHashSet<Subscriber<? super GameUpdate>> subscribers = new ConcurrentHashSet<>();
 
 	Seek seek = null;
 	Set<Game> spectating;
@@ -240,6 +245,7 @@ public class Client extends Thread {
 		Seek.seekStuffLock.lock();
 		try{
 			if (seek != null) {
+				Log("Removing seek " + seek.no + " from player " + this.player.getName());
 				Seek.removeSeek(seek.no);
 				seek = null;
 			}
@@ -535,7 +541,8 @@ public class Client extends Thread {
 										Integer.parseInt(m.group(9)),
 										Integer.parseInt(m.group(10)),
 										Integer.parseInt(m.group(11)),
-										m.group(12)
+										m.group(12),
+										null
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -575,7 +582,8 @@ public class Client extends Thread {
 									Integer.parseInt(m.group(9)),
 									0,
 									0,
-									m.group(10)
+									m.group(10),
+									null
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -627,7 +635,8 @@ public class Client extends Thread {
 									0,
 									0,
 									0,
-									""
+									"",
+									null
 								);
 								Log("Seek "+seek.boardSize);
 							}
@@ -641,19 +650,22 @@ public class Client extends Thread {
 						Seek.seekStuffLock.lock();
 						try{
 							Seek sk = Seek.seeks.get(Integer.parseInt(m.group(1)));
-
 							if (sk != null && game == null && sk.client.player.getGame() == null && sk!=seek && (sk.opponent.toLowerCase().equals(player.getName().toLowerCase()) || sk.opponent.equals(""))) {
-								removeSeeks();
-
 								Client otherClient = sk.client;
 								int sz = sk.boardSize;
 								int time = sk.time;
+								
+								removeSeeks();
 								otherClient.removeSeeks();
-
 								unspectateAll();
 								otherClient.unspectateAll();
 								
-								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount);
+								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount, sk.pntId);
+								notifySubscribers(GameUpdate.gameCreated(game.toDto()));
+								for(var subscriber: subscribers) {
+									game.subscribe(subscriber);
+								}
+								
 								game.gameLock.lock();
 								try{
 									Game.addGame(game);
@@ -1086,5 +1098,15 @@ public class Client extends Thread {
 			TakServer.Log(ex);
 		}
 		
+	}
+
+	@Override
+	public void subscribe(Subscriber<? super GameUpdate> subscriber) {
+		subscribers.add(subscriber);
+	}
+	protected void notifySubscribers(GameUpdate update) {
+		for (var subscriber: subscribers) {
+			subscriber.onNext(update);
+		}
 	}
 }
