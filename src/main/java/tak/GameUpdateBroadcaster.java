@@ -53,7 +53,7 @@ public final class GameUpdateBroadcaster implements Runnable, Subscriber<GameUpd
 			return;
 		}
 
-		logger.info("started " + GameUpdateBroadcaster.class.getSimpleName());
+		logger.info("started " + GameUpdateBroadcaster.class.getSimpleName() + " with event-subscriber-url=" + eventSubscriberUrl);
 		try {
 			while(!stopped.get()) {
 				var update = updatesToBroadcast.poll(1, TimeUnit.SECONDS);
