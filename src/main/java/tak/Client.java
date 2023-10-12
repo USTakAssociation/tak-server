@@ -11,6 +11,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import tak.utils.BadWordFilter;
 import tak.utils.ConcurrentHashSet;
 
 /*
@@ -439,15 +441,26 @@ public class Client extends Thread {
 							Player.loginLock.unlock();
 						}
 					}
+					//Wrong registration chars
+					else if ((wrongRegisterPattern.matcher(temp)).find()) {
+						send("Registration Error: Unknown format for username/email. Only [a-z][A-Z][0-9][_] allowed for username, it should be 4-16 characters and should start with letter");
+					}
 					//Registration
 					else if ((m = registerPattern.matcher(temp)).find()) {
 						String tname = m.group(1).trim();
+						// prevent swear words in username
+
+						if(BadWordFilter.containsBadWord(tname)){
+							send("Registration Error: Username cannot contain profanity");
+							return;
+						}
+						
 						if(tname.toLowerCase().contains("guest")) {
-							send("Can't register with guest in the name");
+							send("Registration Error: Can't register with guest in the name");
 						} else {
 							synchronized(Player.players) {
 								if (Player.isNameTaken(tname)) {
-									send("Name already taken");
+									send("Registration Error: Name already taken");
 								}
 								else {
 									String email = m.group(2).trim();
@@ -456,10 +469,6 @@ public class Client extends Thread {
 								}
 							}
 						}
-					}
-					//Wrong registration chars
-					else if ((wrongRegisterPattern.matcher(temp)).find()) {
-						send("Unknown format for username/email. Only [a-z][A-Z][0-9][_] allowed for username, it should be 4-16 characters and should start with letter");
 					}
 					//SendResetToken
 					else if ((m = sendResetTokenPattern.matcher(temp)).find()) {
@@ -820,7 +829,7 @@ public class Client extends Thread {
 					}
 					//Shout
 					else if ((m=shoutPattern.matcher(temp)).find()){
-						String msg = "<"+player.getName()+"> "+m.group(1);
+						String msg = "<"+player.getName()+"> "+BadWordFilter.filterText(m.group(1));
 						
 						if(!player.isGagged()) {
 							sendAllOnline("Shout "+msg);
@@ -846,9 +855,9 @@ public class Client extends Thread {
 						if(Player.players.containsKey(m.group(1))) {
 							Player tplayer = Player.players.get(m.group(1));
 							tplayer.send("Tell "+"<"+player.getName()+"> "+
-												m.group(2));
+									BadWordFilter.filterText(m.group(2)));
 							send("Told "+"<"+tplayer.getName()+"> "+
-												m.group(2));
+									BadWordFilter.filterText(m.group(2)));
 						} else {
 							send("No such player");
 						}

@@ -30,6 +30,7 @@ public class Player {
 	public static Map<String, Player> guestsByToken = new ConcurrentHashMap<>();
 	public static ConcurrentHashSet<Player> modList = new ConcurrentHashSet<>();
 	public static ConcurrentHashSet<Player> gagList = new ConcurrentHashSet<>();
+	public static ConcurrentHashSet<Player> banList = new ConcurrentHashSet<>();
 	public static ConcurrentHashSet<String> takenName = new ConcurrentHashSet<>();
 	
 	static int idCount=0;
@@ -48,10 +49,12 @@ public class Player {
 	private int r8;
 	
 	private boolean guest;
-	public boolean isbot=false;
-	public boolean is_admin = false;
-	public boolean is_mod = false;
+	public boolean isbot;
+	public boolean is_admin;
+	public boolean is_mod;
 	private boolean gag = false;//don't broadcast his shouts
+	public boolean is_banned = false;
+
 	//variables not in database
 	public Client client;
 	private Game game;
@@ -227,6 +230,20 @@ public class Player {
 		return gag;
 	}
 	
+	public void ban() {
+		is_banned = true;
+		Player.banList.add(this);
+	}
+	
+	public void unBan() {
+		is_banned = false;
+		Player.banList.remove(this);
+	}
+	
+	public boolean isBanned() {
+		return is_banned;
+	}
+	
 	public void loggedOut() {
 		this.client = null;
 		if(guest) {
@@ -315,7 +332,7 @@ public class Player {
 		ResultSet rs=null;
 		try{
 			try( 
-				PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
+				PreparedStatement stmt = Database.playersConnection.prepareStatement(sql)
 			){
 				stmt.setInt(1, id);
 				rs = stmt.executeQuery();
@@ -336,7 +353,7 @@ public class Player {
 
 			if(ratingbase!=0){
 				try( 
-					PreparedStatement stmt=Database.playersConnection.prepareStatement(sql);
+					PreparedStatement stmt=Database.playersConnection.prepareStatement(sql)
 				){
 					stmt.setInt(1, ratingbase);
 					rs = stmt.executeQuery();
