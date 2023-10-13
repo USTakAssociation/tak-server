@@ -867,8 +867,10 @@ public class Client extends Thread {
 							Player tplayer = Player.players.get(m.group(1));
 							if(!player.isGagged()){
 								tplayer.send("Tell "+"<"+player.getName()+"> "+ BadWordFilter.filterText(m.group(2)));
+								send("Told "+"<"+tplayer.getName()+"> " + BadWordFilter.filterText(m.group(2)));
+							} else {
+								send("Told "+"<"+tplayer.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
 							}
-							send("Told "+"<"+tplayer.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
 						} else {
 							send("No such player");
 						}
