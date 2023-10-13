@@ -36,24 +36,17 @@ public class Player {
 	static int idCount=0;
 	static AtomicInteger guestCount = new AtomicInteger(0);
 	
-	private String name;
+	private final String name;
 	private String password;
-	private String email;
-	private int id;//Primary key
-
-	//Ratings for 4x4.. 8x8 games
-	private int r4;
-	private int r5;
-	private int r6;
-	private int r7;
-	private int r8;
+	private final String email;
+	private final int id;//Primary key
 	
-	private boolean guest;
+	private final  boolean guest;
 	public boolean isbot;
 	public boolean is_admin;
 	public boolean is_mod;
-	private boolean gag = false;//don't broadcast his shouts
-	public boolean is_banned = false;
+	private boolean gag;//don't broadcast his shouts or tells
+	public boolean is_banned;
 
 	//variables not in database
 	public Client client;
@@ -83,30 +76,26 @@ public class Player {
 		}
 	}
 	
-	Player(String name, String email, String password, int id, int r4, int r5,
-			int r6, int r7, int r8, boolean guest, boolean bot, boolean admin, boolean mod) {
+	Player(String name, String email, String password, int id, boolean guest, boolean bot, boolean admin, boolean is_mod, boolean is_banned, boolean is_gagged) {
 		this.name = name;
 		this.email = email;
 		this.password = password;
 		this.id = id;
-		this.r4 = r4;
-		this.r5 = r5;
-		this.r6 = r6;
-		this.r7 = r7;
-		this.r8 = r8;
 		this.guest = guest;
 		this.resetToken = "";
 		this.isbot=bot;
 		this.is_admin = admin;
-		this.is_mod = mod;
+		this.is_mod = is_mod;
+		this.is_banned = is_banned;
+		this.gag = is_gagged;
 
-		if(mod){
-			setMod();
-		}
+		if(is_mod){ setMod(); }
+		if(is_banned) { setBan(); }
+		if(is_gagged){ gag(); }
 		
 		client = null;
 		game = null;
-		this.lastActivity=System.nanoTime();
+		this.lastActivity = System.nanoTime();
 	}
 	
 	public static String uniqifyName(String name){
@@ -133,8 +122,16 @@ public class Player {
 		if(guest){
 			return false;
 		}
+		if(isBanned()) {
+			return false;
+		}
 		else{
-			return BCrypt.checkpw(candidate, password);
+			try{
+				return BCrypt.checkpw(candidate, password);
+			}
+			catch(IllegalArgumentException e){
+				return false;
+			}
 		}
 	}
 	
@@ -206,6 +203,19 @@ public class Player {
 		is_mod = true;
 		modList.add(this);
 	}
+
+	public void setModInDB(String name, int mod) {
+		String sql = "UPDATE players set is_mod = ? where name = ?;";
+		try {
+			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
+			stmt.setInt(1, mod);
+			stmt.setString(2, name);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException ex) {
+			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
 	
 	public void unMod() {
 		is_mod = false;
@@ -220,6 +230,19 @@ public class Player {
 		gag = true;
 		Player.gagList.add(this);
 	}
+
+	public void setGagInDB(String name, int gagged){
+		String sql = "UPDATE players set is_gagged = ? where name = ?;";
+		try {
+			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
+			stmt.setInt(1, gagged);
+			stmt.setString(2, name);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException ex) {
+			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
 	
 	public void unGag() {
 		gag = false;
@@ -230,14 +253,27 @@ public class Player {
 		return gag;
 	}
 	
-	public void ban() {
-		is_banned = true;
+	public void setBan() {
+		this.is_banned = true;
 		Player.banList.add(this);
 	}
 	
 	public void unBan() {
-		is_banned = false;
+		this.is_banned = false;
 		Player.banList.remove(this);
+	}
+
+	public void setBanInDB(String name, int banned) {
+		String sql = "UPDATE players set is_banned = ? where name = ?;";
+		try {
+			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
+			stmt.setInt(1, banned);
+			stmt.setString(2, name);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException ex) {
+			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
+		}
 	}
 	
 	public boolean isBanned() {
@@ -253,7 +289,7 @@ public class Player {
 	}
 	
 	Player(String name, String email, String password, boolean guest) {
-		this(name, email, password, guest?0:++idCount, 0, 0, 0, 0, 0, guest, false, false, false);
+		this(name, email, password, guest?0:++idCount, guest, false, false, false, false, false);
 	}
 	
 	Player() {
@@ -278,6 +314,7 @@ public class Player {
 		BigInteger n26 = new BigInteger("26");
 		String tmpPass = "";
 		int a;
+		// create a temp password
 		for(a=0;a<5;a++){
 			tmpPass+=pwsource.mod(n26).add(BigInteger.TEN).toString(36);
 			pwsource=pwsource.divide(n26);
@@ -290,20 +327,13 @@ public class Player {
 		}
 		
 		Player np = new Player(name, email, Player.hash(tmpPass), false);
-		String sql = "INSERT INTO players (id,name,password,email,r4,r5,r6,r7,r8) "+
-							"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-		
+		String sql = "INSERT INTO players (id,name,password,email) VALUES (?, ?, ?, ?)";
 		try {
 			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
 			stmt.setInt(1, np.id);
 			stmt.setString(2, np.name);
 			stmt.setString(3, np.password);
 			stmt.setString(4, np.email);
-			stmt.setInt(5, np.r4);
-			stmt.setInt(6, np.r5);
-			stmt.setInt(7, np.r6);
-			stmt.setInt(8, np.r7);
-			stmt.setInt(9, np.r8);
 
 			stmt.executeUpdate();
 			stmt.close();
@@ -319,7 +349,7 @@ public class Player {
 	
 	@Override
 	public String toString() {
-		return name+" "+password+" "+email+" "+r4+" "+r5+" "+r6+" "+r7+" "+r8;
+		return name+" "+password+" "+email;
 	}
 	
 	public int getRating(long time){
@@ -395,81 +425,6 @@ public class Player {
 		}
 	}
 	
-	public void setR4(int r4) {
-		this.r4 = r4;
-		String sql = "UPDATE players set r4 = ? where id = ?;";
-		
-		try {
-			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
-			stmt.setInt(1, r4);
-			stmt.setInt(2, id);
-			stmt.executeUpdate();
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	
-	public void setR5(int r5) {
-		this.r5 = r5;
-		String sql = "UPDATE players set r5 = ? where id = ?;";
-		
-		try {
-			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
-			stmt.setInt(1, r5);
-			stmt.setInt(2, id);
-			stmt.executeUpdate();
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	
-	public void setR6(int r6) {
-		this.r6 = r6;
-		String sql = "UPDATE players set r6 = ? where id = ?;";
-		
-		try {
-			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
-			stmt.setInt(1, r6);
-			stmt.setInt(2, id);
-			stmt.executeUpdate();
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	
-	public void setR7(int r7) {
-		this.r7 = r7;
-		String sql = "UPDATE players set r7 = ? where id = ?;";
-		
-		try {
-			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
-			stmt.setInt(1, r7);
-			stmt.setInt(2, id);
-			stmt.executeUpdate();
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	
-	public void setR8(int r8) {
-		this.r8 = r8;
-		String sql = "UPDATE players set r8 = ? where id = ?;";
-		
-		try {
-			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
-			stmt.setInt(1, r8);
-			stmt.setInt(2, id);
-			stmt.executeUpdate();
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-	
 	public void setPassword(String pass) {
 		this.password = Player.hash(pass);
 		
@@ -485,40 +440,6 @@ public class Player {
 			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-
-	public void setModInDB(String name, int mod) {
-		String sql = "UPDATE players set is_mod = ? where name = ?;";
-
-		try {
-			PreparedStatement stmt = Database.playersConnection.prepareStatement(sql);
-			stmt.setInt(1, mod);
-			stmt.setString(2, name);
-			stmt.executeUpdate();
-			stmt.close();
-		} catch (SQLException ex) {
-			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-
-	public int getR4() {
-		return r4;
-	}
-	
-	public int getR5() {
-		return r5;
-	}
-	
-	public int getR6() {
-		return r6;
-	}
-	
-	public int getR7() {
-		return r7;
-	}
-	
-	public int getR8() {
-		return r8;
-	}
 	
 	public String getName() {
 		return name;
@@ -532,35 +453,27 @@ public class Player {
 		return password;
 	}
 	
-	public int getId() {
-		return id;
-	}
-	
 	public static void loadFromDB() {
 		idCount=0;
 		try (Statement stmt = Database.playersConnection.createStatement();
 				ResultSet rs = stmt.executeQuery("SELECT * FROM players;")) {
 			while(rs.next()) {
 				Player np = new Player(
-							rs.getString("name"),
-							rs.getString("email"),
-							rs.getString("password"),
-							rs.getInt("id"),
-							rs.getInt("r4"),
-							rs.getInt("r5"),
-							rs.getInt("r6"),
-							rs.getInt("r7"),
-							rs.getInt("r8"),
-							false,
-							rs.getInt("isbot") == 1,
-							rs.getInt("is_admin") == 1,
-							rs.getInt("is_mod") == 1
-						);
+					rs.getString("name"),
+					rs.getString("email"),
+					rs.getString("password"),
+					rs.getInt("id"),
+					false,
+					rs.getInt("isbot") == 1,
+					rs.getInt("is_admin") == 1,
+					rs.getInt("is_mod") == 1,
+					rs.getInt("is_banned") == 1,
+					rs.getInt("is_gagged") == 1
+				);
 				players.put(np.name, np);
 				takeName(np.name);
 				if(idCount<np.id)
 					idCount=np.id;
-				
 			}
 		} catch (SQLException ex) {
 			Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);

@@ -4,8 +4,6 @@ import java.net.*;
 import java.io.*;
 import java.nio.*;
 import java.nio.charset.*;
-import java.util.*;
-import java.security.*;
 import java.util.concurrent.locks.*;
 
 /**
@@ -13,7 +11,6 @@ import java.util.concurrent.locks.*;
  * @author Nohat
  */
 public class Telnet extends Websocket{
-	//public Socket socket;
 	InputStream stream;
 	OutputStream outstream;
 	final int buffersize=0x10010;

@@ -145,12 +145,21 @@ public class Client extends Thread {
 	
 	String unGagString = "sudo ungag ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern unGagPattern;
+
+	String banString = "sudo ban ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\n]{1,256})";
+	Pattern banPattern;
+
+	String unBanString = "sudo unban ([a-zA-Z][a-zA-Z0-9_]{3,15})";
+	Pattern unBanPattern;
 	
 	String kickString = "sudo kick ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern kickPattern;
 	
 	String listCmdString = "sudo list ([a-zA-Z]{3,15})";
 	Pattern listCmdPattern;
+
+	String reloadWordCmdString = "sudo reload wordconfig";
+	Pattern reloadWordCmdPattern;
 	
 	//set param user value
 	String setString = "sudo set ([a-zA-Z]{3,15}) ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\r\\s]{6,100})";
@@ -205,8 +214,11 @@ public class Client extends Thread {
 		sudoPattern = Pattern.compile(sudoString);
 		gagPattern = Pattern.compile(gagString);
 		unGagPattern = Pattern.compile(unGagString);
+		banPattern = Pattern.compile(banString);
+		unBanPattern = Pattern.compile(unBanString);
 		kickPattern = Pattern.compile(kickString);
 		listCmdPattern = Pattern.compile(listCmdString);
+		reloadWordCmdPattern = Pattern.compile(reloadWordCmdString);
 		setPattern = Pattern.compile(setString);
 		modPattern = Pattern.compile(modString);
 		unModPattern = Pattern.compile(unModString);
@@ -441,26 +453,21 @@ public class Client extends Thread {
 							Player.loginLock.unlock();
 						}
 					}
-					//Wrong registration chars
-					else if ((wrongRegisterPattern.matcher(temp)).find()) {
-						send("Registration Error: Unknown format for username/email. Only [a-z][A-Z][0-9][_] allowed for username, it should be 4-16 characters and should start with letter");
-					}
 					//Registration
 					else if ((m = registerPattern.matcher(temp)).find()) {
 						String tname = m.group(1).trim();
 						// prevent swear words in username
-
-						if(BadWordFilter.containsBadWord(tname)){
-							send("Registration Error: Username cannot contain profanity");
-							return;
-						}
 						
 						if(tname.toLowerCase().contains("guest")) {
 							send("Registration Error: Can't register with guest in the name");
-						} else {
+						}
+						else if(BadWordFilter.containsBadWord(tname)){
+							send("Registration Error: Username cannot contain profanity");
+						}
+						else {
 							synchronized(Player.players) {
 								if (Player.isNameTaken(tname)) {
-									send("Registration Error: Name already taken");
+									send("Registration Error: Username is already taken");
 								}
 								else {
 									String email = m.group(2).trim();
@@ -469,6 +476,10 @@ public class Client extends Thread {
 								}
 							}
 						}
+					}
+					//Wrong registration chars
+					else if ((wrongRegisterPattern.matcher(temp)).find()) {
+						send("Registration Error: Unknown format for username/email. Only [a-z][A-Z][0-9][_] allowed for username, it should be 4-16 characters and should start with letter");
 					}
 					//SendResetToken
 					else if ((m = sendResetTokenPattern.matcher(temp)).find()) {
@@ -480,10 +491,10 @@ public class Client extends Thread {
 								tplayer.sendResetToken();
 								send("Reset token sent");
 							} else {
-								send("Email address does not match");
+								send("Reset Token Error: Email address does not match");
 							}
 						} else {
-							send("No such player");
+							send("Reset Token Error: No such player");
 						}
 					}
 					//ResetPassword
@@ -835,7 +846,7 @@ public class Client extends Thread {
 							sendAllOnline("Shout "+msg);
 							IRCBridge.send(msg);
 						} else//send to only gagged player
-							sendWithoutLogging("Shout "+msg);
+							sendWithoutLogging("Shout <"+player.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
 					}
 					//JoinRoom
 					else if((m=joinRoomPattern.matcher(temp)).find()) {
@@ -848,16 +859,16 @@ public class Client extends Thread {
 					}
 					//ShoutRoom
 					else if ((m=shoutRoomPattern.matcher(temp)).find()) {
-						ChatRoom.shout(m.group(1),this,m.group(2));
+						ChatRoom.shout(m.group(1), this, m.group(2));
 					}
 					//Tell
 					else if ((m=tellPattern.matcher(temp)).find()) {
 						if(Player.players.containsKey(m.group(1))) {
 							Player tplayer = Player.players.get(m.group(1));
-							tplayer.send("Tell "+"<"+player.getName()+"> "+
-									BadWordFilter.filterText(m.group(2)));
-							send("Told "+"<"+tplayer.getName()+"> "+
-									BadWordFilter.filterText(m.group(2)));
+							if(!player.isGagged()){
+								tplayer.send("Tell "+"<"+player.getName()+"> "+ BadWordFilter.filterText(m.group(2)));
+							}
+							send("Told "+"<"+tplayer.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
 						} else {
 							send("No such player");
 						}
@@ -943,8 +954,14 @@ public class Client extends Thread {
 				sendSudoReply("You dont have rights");
 				return;
 			}
+
+			if(!p.isGagged()) {
+				sendSudoReply("Player is not gagged");
+				return;
+			}
 			
 			p.unGag();
+			p.setGagInDB(p.getName(), 0);
 			sendSudoReply(p.getName()+" ungagged");
 		}
 		// Gag player
@@ -960,8 +977,14 @@ public class Client extends Thread {
 				sendSudoReply("You don't have rights");
 				return;
 			}
+
+			if(p.isGagged()) {
+				sendSudoReply("Player is already gagged");
+				return;
+			}
 			
 			p.gag();
+			p.setGagInDB(p.getName(), 1);
 			sendSudoReply(p.getName()+" gagged");
 		}
 		// kick player
@@ -986,13 +1009,72 @@ public class Client extends Thread {
 			
 			c.disconnect();
 			sendSudoReply(p.getName()+" kicked");
-			
+		}
+		// ban player
+		else if((m=banPattern.matcher(msg)).find()) {
+			String name = m.group(1);
+			String reason = m.group(2);
+			Player p = Player.players.get(name);
+			if(p == null) {
+				sendSudoReply("No such player");
+				return;
+			}
+
+			if(!moreRights(p)) {
+				sendSudoReply("You don't have rights");
+				return;
+			}
+			// check if player is already banned
+			if(p.isBanned()) {
+				sendSudoReply("Player is already banned");
+				return;
+			}
+
+			p.setBan();
+			p.setBanInDB(p.getName(), 1);
+			// email player that they have been banned
+			EMail.send(p.getEmail(), "PlayTak.com Ban Notice", p.getName() + ",\rYou have been banned from playtak.com!\rReason: " + reason);
+			// kick player as well
+			Client c = p.getClient();
+			if(c == null) {
+				sendSudoReply("Player not logged in");
+				return;
+			}
+			c.disconnect();
+			sendSudoReply(p.getName()+" kicked");
+			sendSudoReply(p.getName()+" banned");
+		}
+		//unban player
+		else if((m=unBanPattern.matcher(msg)).find()) {
+			String name = m.group(1);
+			Player p = Player.players.get(name);
+			if(p == null) {
+				sendSudoReply("No such player");
+				return;
+			}
+
+			if(!moreRights(p)) {
+				sendSudoReply("You don't have rights");
+				return;
+			}
+			if(!p.isBanned()){
+				sendSudoReply("Player is not banned");
+				return;
+			}
+
+			p.unBan();
+			p.setBanInDB(p.getName(), 0);
+			sendSudoReply(p.getName()+" unbanned");
 		}
 		// list commands
 		else if((m=listCmdPattern.matcher(msg)).find()) {
-			String var = m.group(1);
+			// privileged commands - only for admins
+			if(!player.isAdmin()) {
+				sendSudoReply("command not found");
+				return;
+			}
 			// return gag list
-			if("gag".equals(var)) {
+			if("gag".equals(m.group(1))) {
 				String res="[";
 				for(Player p: Player.gagList)
 					res += p.getName()+", ";
@@ -1000,29 +1082,40 @@ public class Client extends Thread {
 				sendSudoReply(res+"]");
 			}
 			// return mod list
-			else if ("mod".equals(var)) {
+			else if ("mod".equals(m.group(1))) {
 				String res = "[";
 				for(Player p: Player.modList)
 					res += p.getName()+", ";
 				
 				sendSudoReply(res+"]");
 			}
-			else {
-				// privileged commands - only for admins
-				if(!player.isAdmin()) {
-					sendSudoReply("command not found");
-					return;
-				}
-				
-				if("online".equals(var)) {
+			// return mod list
+			else if ("ban".equals(m.group(1))) {
+				String res = "[";
+				for(Player p: Player.banList)
+					res += p.getName()+", ";
+
+				sendSudoReply(res+"]");
+			}
+			else if("online".equals(m.group(1))) {
 					String res = "[";
 					for(Client c: clientConnections) {
 						if(c.player != null)
 							res += c.player.getName()+", ";
 					}
 					sendSudoReply(res+"]");
-				}
+			} else {
+				sendSudoReply("command not found");
+				// privileged commands - only for admins
 			}
+		}
+		else if((m=reloadWordCmdPattern.matcher(msg)).find()) {
+			// privileged commands - only for admins
+			if(!player.isAdmin()) {
+				sendSudoReply("command not found");
+				return;
+			}
+			BadWordFilter.loadConfigs();
 		}
 		else {
 			// privileged commands - only for admin
@@ -1030,7 +1123,7 @@ public class Client extends Thread {
 				sendSudoReply("command not found");
 				return;
 			}
-			// only admins can add mods
+			// add mods
 			if((m=modPattern.matcher(msg)).find()) {
 				String name = m.group(1);
 				System.out.println("here "+name+" "+msg);

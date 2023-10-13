@@ -13,7 +13,8 @@ public class BadWordFilter {
     
     public static void loadConfigs() {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new URL("https://docs.google.com/spreadsheets/d/1hIEi2YG3ydav1E06Bzf2mQbGZ12kh2fe4ISgLg_UBuM/export?format=csv").openConnection().getInputStream()));
+            words.clear();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new URL("https://docs.google.com/spreadsheets/d/1eVhQjZe1wbZdPQ4a2IlZ-jJUsgZmVoyrzXAjlQpA7hk/export?format=csv").openConnection().getInputStream()));
             String line;
             int counter = 0;
             while((line = reader.readLine()) != null) {
@@ -44,9 +45,7 @@ public class BadWordFilter {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
-
 
     /**
      * Iterates over a String input and checks whether a cuss word was found in a list, then checks if the word should be ignored (e.g. bass contains the word *ss).
@@ -60,7 +59,6 @@ public class BadWordFilter {
         }
 
         // don't forget to remove leet speak, probably want to move this to its own function and use regex if you want to use this
-        
         input = input.replaceAll("1","i");
         input = input.replaceAll("!","i");
         input = input.replaceAll("3","e");
@@ -70,7 +68,6 @@ public class BadWordFilter {
         input = input.replaceAll("7","t");
         input = input.replaceAll("0","o");
         input = input.replaceAll("9","g");
-        
 
         ArrayList<String> badWords = new ArrayList<>();
         input = input.toLowerCase().replaceAll("[^a-zA-Z]", "");
@@ -96,9 +93,7 @@ public class BadWordFilter {
                 }
             }
         }
-
         return badWords;
-
     }
 
     public static Boolean containsBadWord(String input) {
