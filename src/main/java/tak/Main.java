@@ -1,5 +1,7 @@
 package tak;
 
+import tak.utils.BadWordFilter;
+
 /**
  *
  * @author chaitu
@@ -9,6 +11,7 @@ public class Main {
 	public static void main(String[] args) {
 		Settings.parse();
 		Database.initConnection();
+		BadWordFilter.loadConfigs();
 		Player.loadFromDB();
 
 		IRCBridge.init();

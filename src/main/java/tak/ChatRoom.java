@@ -5,8 +5,8 @@
  */
 package tak;
 
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import tak.utils.BadWordFilter;
 import tak.utils.ConcurrentHashSet;
 import java.util.concurrent.locks.*;
 
@@ -43,9 +43,13 @@ public class ChatRoom {
 	public static void shout(String name, Client client, String msg) {		
 		ChatRoom room=chatRooms.get(name);
 		if(room!=null){
-			String compiledmessage="ShoutRoom "+name+" <"+client.player.getName()+"> "+msg;
-			for (Client cc : room.members) {
-				cc.sendWithoutLogging(compiledmessage);
+			String compiledmessage="ShoutRoom "+name+" <"+client.player.getName()+"> "+ BadWordFilter.filterText(msg);
+			if(!client.player.isGagged()) {
+				for (Client cc : room.members) {
+					cc.sendWithoutLogging(compiledmessage);
+				}
+			} else {
+				client.sendWithoutLogging("ShoutRoom "+name+" <"+client.player.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
 			}
 		}
 	}
