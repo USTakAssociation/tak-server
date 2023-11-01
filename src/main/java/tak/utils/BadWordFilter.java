@@ -165,6 +165,10 @@ public class BadWordFilter {
 		for(int i = 0; i < words.length; i++) {
 			input += words[i] + " ";
 		}
+		// remove trailing space if there is one
+		if(input.length() > 0 && input.charAt(input.length() - 1) == ' ') {
+			input = input.substring(0, input.length() - 1);
+		}
 		return input;
     }
 }
