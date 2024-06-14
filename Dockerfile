@@ -1,4 +1,4 @@
-FROM maven:3.9.1-amazoncorretto-20
+FROM maven:3.9-amazoncorretto-21
 VOLUME /tmp
 WORKDIR /tmp/
 COPY ./pom.xml /tmp/
