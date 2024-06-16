@@ -1,4 +1,4 @@
-FROM maven:3.9-amazoncorretto-21
+FROM maven:3-eclipse-temurin-21-alpine
 VOLUME /tmp
 WORKDIR /tmp/
 COPY ./pom.xml /tmp/
