@@ -1,4 +1,17 @@
-FROM maven:3-eclipse-temurin-21-alpine
+FROM maven:3-eclipse-temurin-21-alpine as base
+
+FROM base as dev
+RUN apk add npm
+RUN npm install -g amvn
+
+WORKDIR /app
+# amvn will rebuild+restart the server when .java files change
+# Logged in users (not guests) will reconnected by the UI within ~12s.
+
+# consider removing clean for slightly faster comilation
+ENTRYPOINT amvn clean package exec:java --watch
+
+FROM base as production
 VOLUME /tmp
 WORKDIR /tmp/
 COPY ./pom.xml /tmp/
