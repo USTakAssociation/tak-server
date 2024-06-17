@@ -15,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import tak.FlowMessages.GameUpdate;
+import tak.utils.BadWordFilter;
 import tak.utils.ConcurrentHashSet;
 
 /*
@@ -32,7 +33,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 	Player player = null;
 	int clientNo;
 	public int protocolVersion=0;
-	
+
 	static AtomicInteger totalClients = new AtomicInteger(0);
 	static AtomicInteger onlineClients = new AtomicInteger(0);
 
@@ -45,49 +46,49 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 
 	String loginString = "^Login ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\r\\s]{6,50})";
 	Pattern loginPattern;
-	
+
 	String loginGuestString = "^Login Guest ?(([a-z]{20})?)";
 	Pattern loginGuestPattern;
-	
+
 	String registerString = "^Register ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([A-Za-z.0-9_+!#$%&'*^?=-]{1,30}@[A-Za-z.0-9-]{3,30})";
 	Pattern registerPattern;
-	
+
 	String wrongRegisterString = "^Register [^\n\r]{1,256}";
 	Pattern wrongRegisterPattern;
-	
+
 	String clientString = "^Client ([A-Za-z-.0-9]{1,60})";
 	Pattern clientPattern;
-	
+
 	String protocolString = "^Protocol ([1-9][0-9]{0,8})";
 	Pattern protocolPattern;
-	
+
 	String changePasswordString = "^ChangePassword ([^\n\r\\s]{6,50}) ([^\n\r\\s]{6,50})";
 	Pattern changePasswordPattern;
-	
+
 	String sendResetTokenString = "^SendResetToken ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([A-Za-z.0-9_+!#$%&'*^?=-]{1,30}@[A-Za-z.0-9-]{3,30})";
 	Pattern sendResetTokenPattern;
-	
+
 	String resetPasswordString = "^ResetPassword ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\r\\s]{6,50}) ([^\n\r\\s]{6,50})";
 	Pattern resetPasswordPattern;
-	
+
 	String placeString = "^Game#(\\d+) P ([A-Z])(\\d)( C)?( W)?";
 	Pattern placePattern;
 
 	String moveString = "^Game#(\\d+) M ([A-Z])(\\d) ([A-Z])(\\d)(( \\d)+)";
 	Pattern movePattern;
-	
+
 	String undoString = "^Game#(\\d+) RequestUndo";
 	Pattern undoPattern;
-	
+
 	String removeUndoString = "^Game#(\\d+) RemoveUndo";
 	Pattern removeUndoPattern;
-	
+
 	String drawString = "^Game#(\\d+) OfferDraw";
 	Pattern drawPattern;
-	
+
 	String removeDrawString = "^Game#(\\d+) RemoveDraw";
 	Pattern removeDrawPattern;
-	
+
 	String resignString = "^Game#(\\d+) Resign";
 	Pattern resignPattern;
 
@@ -108,63 +109,72 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 
 	String gameListString = "^GameList";
 	Pattern gameListPattern;
-	
+
 	String observeString = "^Observe (\\d+)";
 	Pattern observePattern;
-	
+
 	String unobserveString = "^Unobserve (\\d+)";
 	Pattern unobservePattern;
 
 	String gameString = "^Game#(\\d+) Show$";
 	Pattern gamePattern;
-	
+
 	String getSqStateString = "^Game#(\\d+) Show ([A-Z])(\\d)";
 	Pattern getSqStatePattern;
-	
+
 	String shoutString = "^Shout ([^\n\r]{1,256})";
 	Pattern shoutPattern;
-	
+
 	String shoutRoomString = "^ShoutRoom ([^\n\r\\s]{1,64}) ([^\n\r]{1,256})";
 	Pattern shoutRoomPattern;
-	
+
 	String joinRoomString = "^JoinRoom ([^\n\r\\s]{1,64})";
 	Pattern joinRoomPattern;
-	
+
 	String leaveRoomString = "^LeaveRoom ([^\n\r\\s]{1,64})";
 	Pattern leaveRoomPattern;
-	
+
 	String tellString = "^Tell ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\r]{1,256})";
 	Pattern tellPattern;
-	
+
 	String pingString = "^PING$";
 	Pattern pingPattern;
-	
+
 	String sudoString = "sudo ([^\n\r]{1,256})";
 	Pattern sudoPattern;
-	
+
 	/* Mod commands start with sudoString */
 	String gagString = "sudo gag ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern gagPattern;
-	
+
 	String unGagString = "sudo ungag ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern unGagPattern;
-	
+
+	String banString = "sudo ban ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\n]{1,256})";
+	Pattern banPattern;
+
+	String unBanString = "sudo unban ([a-zA-Z][a-zA-Z0-9_]{3,15})";
+	Pattern unBanPattern;
+
 	String kickString = "sudo kick ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern kickPattern;
-	
+
 	String listCmdString = "sudo list ([a-zA-Z]{3,15})";
 	Pattern listCmdPattern;
-	
+
+	String reloadWordCmdString = "sudo reload wordconfig";
+	Pattern reloadWordCmdPattern;
+
 	//set param user value
 	String setString = "sudo set ([a-zA-Z]{3,15}) ([a-zA-Z][a-zA-Z0-9_]{3,15}) ([^\n\r\\s]{6,100})";
 	Pattern setPattern;
-	
+
 	String modString = "sudo mod ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern modPattern;
-	
+
 	String unModString = "sudo unmod ([a-zA-Z][a-zA-Z0-9_]{3,15})";
 	Pattern unModPattern;
-	
+
 	String broadcastString = "sudo broadcast ([^\n\r]{1,256})";
 	Pattern broadcastPattern;
 
@@ -204,12 +214,15 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 		tellPattern = Pattern.compile(tellString);
 		pingPattern = Pattern.compile(pingString);
 		loginGuestPattern = Pattern.compile(loginGuestString);
-		
+
 		sudoPattern = Pattern.compile(sudoString);
 		gagPattern = Pattern.compile(gagString);
 		unGagPattern = Pattern.compile(unGagString);
+		banPattern = Pattern.compile(banString);
+		unBanPattern = Pattern.compile(unBanString);
 		kickPattern = Pattern.compile(kickString);
 		listCmdPattern = Pattern.compile(listCmdString);
+		reloadWordCmdPattern = Pattern.compile(reloadWordCmdString);
 		setPattern = Pattern.compile(setString);
 		modPattern = Pattern.compile(modString);
 		unModPattern = Pattern.compile(unModString);
@@ -228,7 +241,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 		Log("Send:"+st);
 		sendWithoutLogging(st);
 	}
-	
+
 	void sendCmdReply(String st) {
 		sendWithoutLogging("CmdReply "+st);
 	}
@@ -254,19 +267,19 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 			Seek.seekStuffLock.unlock();
 		}
 	}
-	
+
 	void unspectateAll() {
 		for(Game g: spectating)
 			g.unSpectate(player);
 		spectating.clear();
 	}
-	
+
 	static void sendAll(final String msg) {
 		for(Client c: clientConnections){
 			c.sendWithoutLogging(msg);
 		}
 	}
-	
+
 	static void sendAllOnline(final String msg) {
 		for(Client c: clientConnections){
 			if(c.player!=null){
@@ -297,11 +310,11 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 		websocket.kill(201);
 		Log("disconnected");
 	}
-	
+
 	void Log(Object obj) {
 		TakServer.Log(clientNo+":"+((player!=null)?player.getName():"")+":"+obj);
 	}
-	
+
 	void disconnect() {
 		websocket.kill(202);
 	}
@@ -325,11 +338,11 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					}
 				}
 				temp = temp.replaceAll("[\\n\\r]+$","");
-				
+
 				if(temp.equals("quit")){
 					break;
 				}
-				
+
 				if((pingPattern.matcher(temp)).find()) {
 					if(player!=null){
 						player.lastActivity=System.nanoTime();
@@ -338,7 +351,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					temp=null;
 					continue;
 				}
-				
+
 				Matcher m;
 
 				if (player == null) {
@@ -389,10 +402,10 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 
 							send("Welcome "+player.getName()+"!");
 							Log("Player logged in");
-							
+
 							Seek.registerListener(this);
 							Game.registerGameListListener(player);
-							
+
 							sendAllOnline("Online "+onlineClients.incrementAndGet());
 						}
 						finally{
@@ -431,10 +444,10 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 											send("Is Mod");
 										}
 										player.login(this);
-										
+
 										Seek.registerListener(this);
 										Game.registerGameListListener(player);
-										
+
 										sendAllOnline("Online "+onlineClients.incrementAndGet());
 									}
 								} else
@@ -448,12 +461,18 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					//Registration
 					else if ((m = registerPattern.matcher(temp)).find()) {
 						String tname = m.group(1).trim();
+						// prevent swear words in username
+
 						if(tname.toLowerCase().contains("guest")) {
-							send("Can't register with guest in the name");
-						} else {
+							send("Registration Error: Can't register with guest in the name");
+						}
+						else if(BadWordFilter.containsBadWord(tname)){
+							send("Registration Error: Username cannot contain profanity");
+						}
+						else {
 							synchronized(Player.players) {
 								if (Player.isNameTaken(tname)) {
-									send("Name already taken");
+									send("Registration Error: Username is already taken");
 								}
 								else {
 									String email = m.group(2).trim();
@@ -465,7 +484,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					}
 					//Wrong registration chars
 					else if ((wrongRegisterPattern.matcher(temp)).find()) {
-						send("Unknown format for username/email. Only [a-z][A-Z][0-9][_] allowed for username, it should be 4-16 characters and should start with letter");
+						send("Registration Error: Unknown format for username/email. Only [a-z][A-Z][0-9][_] allowed for username, it should be 4-16 characters and should start with letter");
 					}
 					//SendResetToken
 					else if ((m = sendResetTokenPattern.matcher(temp)).find()) {
@@ -477,10 +496,10 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 								tplayer.sendResetToken();
 								send("Reset token sent");
 							} else {
-								send("Email address does not match");
+								send("Reset Token Error: Email address does not match");
 							}
 						} else {
-							send("No such player");
+							send("Reset Token Error: No such player");
 						}
 					}
 					//ResetPassword
@@ -503,7 +522,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 						sendNOK();
 				} else {
 					Log("Read:"+temp);
-					
+
 					Game game = player.getGame();
 					//List all seeks
 					if ((m = listPattern.matcher(temp)).find()) {
@@ -564,7 +583,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 								seek = null;
 							} else {
 								Seek.COLOR clr = Seek.COLOR.ANY;
-								
+
 								if("W".equals(m.group(4)))
 									clr = Seek.COLOR.WHITE;
 								else if("B".equals(m.group(4)))
@@ -605,12 +624,12 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 								seek = null;
 							} else {
 								Seek.COLOR clr = Seek.COLOR.ANY;
-								
+
 								if(" W".equals(m.group(4)))
 									clr = Seek.COLOR.WHITE;
 								else if(" B".equals(m.group(4)))
 									clr = Seek.COLOR.BLACK;
-									
+
 								int capstonesCount=0;
 								int tilesCount=0;
 								switch(Integer.parseInt(m.group(1))) {
@@ -621,7 +640,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 									case 7: capstonesCount = 2; tilesCount = 40; break;
 									case 8: capstonesCount = 2; tilesCount = 50; break;
 								}
-									
+
 								seek = Seek.newSeek(
 									this,
 									Integer.parseInt(m.group(1)),
@@ -654,25 +673,25 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 								Client otherClient = sk.client;
 								int sz = sk.boardSize;
 								int time = sk.time;
-								
+
 								removeSeeks();
 								otherClient.removeSeeks();
 								unspectateAll();
 								otherClient.unspectateAll();
-								
+
 								game = new Game(player, otherClient.player, sz, time, sk.incr, sk.color, sk.komi, sk.pieces, sk.capstones, sk.unrated, sk.tournament, sk.triggerMove, sk.timeAmount, sk.pntId);
 								notifySubscribers(GameUpdate.gameCreated(game.toDto()));
 								for(var subscriber: subscribers) {
 									game.subscribe(subscriber);
 								}
-								
+
 								game.gameLock.lock();
 								try{
 									Game.addGame(game);
-									
+
 									player.setGame(game);
 									otherClient.player.setGame(game);
-									
+
 									String msg = "Game Start " + game.no +" "+sz+" "+game.white.getName()+" vs "+game.black.getName();
 									String msg2 = time + " " + sk.komi + " " + sk.pieces + " " + sk.capstones + " " + sk.triggerMove + " " + sk.timeAmount;
 									send(msg+" "+((game.white==player)?"white":"black")+" "+msg2);
@@ -778,7 +797,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 						try{
 							game.resign(player);
 							Player otherPlayer = (game.white==player)?game.black:game.white;
-							
+
 							Game.removeGame(game);
 							player.removeGame();
 							otherPlayer.removeGame();
@@ -832,13 +851,13 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					}
 					//Shout
 					else if ((m=shoutPattern.matcher(temp)).find()){
-						String msg = "<"+player.getName()+"> "+m.group(1);
-						
+						String msg = "<"+player.getName()+"> "+BadWordFilter.filterText(m.group(1));
+
 						if(!player.isGagged()) {
 							sendAllOnline("Shout "+msg);
 							IRCBridge.send(msg);
 						} else//send to only gagged player
-							sendWithoutLogging("Shout "+msg);
+							sendWithoutLogging("Shout <"+player.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
 					}
 					//JoinRoom
 					else if((m=joinRoomPattern.matcher(temp)).find()) {
@@ -851,16 +870,18 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					}
 					//ShoutRoom
 					else if ((m=shoutRoomPattern.matcher(temp)).find()) {
-						ChatRoom.shout(m.group(1),this,m.group(2));
+						ChatRoom.shout(m.group(1), this, m.group(2));
 					}
 					//Tell
 					else if ((m=tellPattern.matcher(temp)).find()) {
 						if(Player.players.containsKey(m.group(1))) {
 							Player tplayer = Player.players.get(m.group(1));
-							tplayer.send("Tell "+"<"+player.getName()+"> "+
-												m.group(2));
-							send("Told "+"<"+tplayer.getName()+"> "+
-												m.group(2));
+							if(!player.isGagged()){
+								tplayer.send("Tell "+"<"+player.getName()+"> "+ BadWordFilter.filterText(m.group(2)));
+								send("Told "+"<"+tplayer.getName()+"> " + BadWordFilter.filterText(m.group(2)));
+							} else {
+								send("Told "+"<"+tplayer.getName()+"> <Server: You have been muted for inappropriate chat behavior.>");
+							}
 						} else {
 							send("No such player");
 						}
@@ -869,7 +890,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 					else if ((m=changePasswordPattern.matcher(temp)).find()) {
 						String curPass = m.group(1);
 						String newPass = m.group(2);
-						
+
 						if(player.authenticate(curPass)) {
 							player.setPassword(newPass);
 							send("Password changed");
@@ -896,42 +917,42 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 			}
 		}
 	}
-	
+
 	public void addToRoom(String room) {
 		chatRooms.add(room);
 		ChatRoom.joinRoom(room,this);
 		send("Joined room "+room);
 	}
-	
+
 	public void removeFromRoom(String room) {
 		chatRooms.remove(room);
 		ChatRoom.leaveRoom(room,this);
 	}
-	
+
 	public void removeFromAllRooms() {
 		for(String room : chatRooms){
 			ChatRoom.leaveRoom(room,this);
 		}
 		chatRooms.clear();
 	}
-	
+
 	//this has more rights than p
 	boolean moreRights(Player p) {
 		//if i am mod and other is not mod
 		if(player.isMod() && !p.isMod() || player.isAdmin())
 			return true;
-		
+
 		return false;
 	}
-	
+
 	void sudoHandler(String msg) {
 		if(!player.isMod() && !player.isAdmin()) {
 			sendNOK();
 			return;
 		}
-		
+
 		sendSudoReply("> "+msg);
-		
+
 		Matcher m;
 		// Un Gag player
 		if((m=unGagPattern.matcher(msg)).find()) {
@@ -941,13 +962,19 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 				sendSudoReply("No such player");
 				return;
 			}
-			
+
 			if(!moreRights(p)) {
 				sendSudoReply("You dont have rights");
 				return;
 			}
-			
+
+			if(!p.isGagged()) {
+				sendSudoReply("Player is not gagged");
+				return;
+			}
+
 			p.unGag();
+			p.setGagInDB(p.getName(), 0);
 			sendSudoReply(p.getName()+" ungagged");
 		}
 		// Gag player
@@ -958,13 +985,19 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 				sendSudoReply("No such player");
 				return;
 			}
-			
+
 			if(!moreRights(p)) {
 				sendSudoReply("You don't have rights");
 				return;
 			}
-			
+
+			if(p.isGagged()) {
+				sendSudoReply("Player is already gagged");
+				return;
+			}
+
 			p.gag();
+			p.setGagInDB(p.getName(), 1);
 			sendSudoReply(p.getName()+" gagged");
 		}
 		// kick player
@@ -975,57 +1008,127 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 				sendSudoReply("No such player");
 				return;
 			}
-			
+
 			if(!moreRights(p)) {
 				sendSudoReply("You dont have rights");
 				return;
 			}
-			
+
 			Client c = p.getClient();
 			if(c == null) {
 				sendSudoReply("Player not logged in");
 				return;
 			}
-			
+
 			c.disconnect();
 			sendSudoReply(p.getName()+" kicked");
-			
+		}
+		// ban player
+		else if((m=banPattern.matcher(msg)).find()) {
+			String name = m.group(1);
+			String reason = m.group(2);
+			Player p = Player.players.get(name);
+			if(p == null) {
+				sendSudoReply("No such player");
+				return;
+			}
+
+			if(!moreRights(p)) {
+				sendSudoReply("You don't have rights");
+				return;
+			}
+			// check if player is already banned
+			if(p.isBanned()) {
+				sendSudoReply("Player is already banned");
+				return;
+			}
+
+			p.setBan();
+			p.setBanInDB(p.getName(), 1);
+			// email player that they have been banned
+			EMail.send(p.getEmail(), "PlayTak.com Ban Notice", p.getName() + ",\rYou have been banned from playtak.com!\rReason: " + reason);
+			// kick player as well
+			Client c = p.getClient();
+			if(c == null) {
+				sendSudoReply("Player not logged in");
+				return;
+			}
+			c.disconnect();
+			sendSudoReply(p.getName()+" kicked");
+			sendSudoReply(p.getName()+" banned");
+		}
+		//unban player
+		else if((m=unBanPattern.matcher(msg)).find()) {
+			String name = m.group(1);
+			Player p = Player.players.get(name);
+			if(p == null) {
+				sendSudoReply("No such player");
+				return;
+			}
+
+			if(!moreRights(p)) {
+				sendSudoReply("You don't have rights");
+				return;
+			}
+			if(!p.isBanned()){
+				sendSudoReply("Player is not banned");
+				return;
+			}
+
+			p.unBan();
+			p.setBanInDB(p.getName(), 0);
+			sendSudoReply(p.getName()+" unbanned");
 		}
 		// list commands
 		else if((m=listCmdPattern.matcher(msg)).find()) {
-			String var = m.group(1);
+			// privileged commands - only for admins
+			if(!player.isAdmin()) {
+				sendSudoReply("command not found");
+				return;
+			}
 			// return gag list
-			if("gag".equals(var)) {
+			if("gag".equals(m.group(1))) {
 				String res="[";
 				for(Player p: Player.gagList)
 					res += p.getName()+", ";
-				
+
 				sendSudoReply(res+"]");
 			}
 			// return mod list
-			else if ("mod".equals(var)) {
+			else if ("mod".equals(m.group(1))) {
 				String res = "[";
 				for(Player p: Player.modList)
 					res += p.getName()+", ";
-				
+
 				sendSudoReply(res+"]");
 			}
-			else {
-				// privileged commands - only for admins
-				if(!player.isAdmin()) {
-					sendSudoReply("command not found");
-					return;
-				}
-				
-				if("online".equals(var)) {
+			// return mod list
+			else if ("ban".equals(m.group(1))) {
+				String res = "[";
+				for(Player p: Player.banList)
+					res += p.getName()+", ";
+
+				sendSudoReply(res+"]");
+			}
+			else if("online".equals(m.group(1))) {
 					String res = "[";
 					for(Client c: clientConnections) {
 						if(c.player != null)
 							res += c.player.getName()+", ";
 					}
 					sendSudoReply(res+"]");
-				}
+			} else {
+				sendSudoReply("command not found");
+				// privileged commands - only for admins
 			}
+		}
+		else if((m=reloadWordCmdPattern.matcher(msg)).find()) {
+			// privileged commands - only for admins
+			if(!player.isAdmin()) {
+				sendSudoReply("command not found");
+				return;
+			}
+			BadWordFilter.loadConfigs();
 		}
 		else {
 			// privileged commands - only for admin
@@ -1033,7 +1136,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 				sendSudoReply("command not found");
 				return;
 			}
-			// only admins can add mods
+			// add mods
 			if((m=modPattern.matcher(msg)).find()) {
 				String name = m.group(1);
 				System.out.println("here "+name+" "+msg);
@@ -1063,7 +1166,7 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 				String param = m.group(1);
 				String name = m.group(2);
 				String value = m.group(3);
-				
+
 				Player p = Player.players.get(name);
 				if(p == null) {
 					sendSudoReply("No such player");
@@ -1080,24 +1183,24 @@ public class Client extends Thread implements Publisher<GameUpdate> {
 			}
 		}
 	}
-	
+
 	static void sigterm() {
 		TakServer.Log("Sigterm!");
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File("message")));
 			String msg = br.readLine();
 			sendAll("Message "+msg);
-			
+
 			int sleep=Integer.parseInt(br.readLine());
 			TakServer.Log("sleeping "+sleep+" milliseconds");
 			Thread.sleep(sleep);
 			sendAll("Message "+br.readLine());
-			
+
 			TakServer.Log("Exiting");
 		} catch (IOException | NumberFormatException | InterruptedException ex) {
 			TakServer.Log(ex);
 		}
-		
+
 	}
 
 	@Override
