@@ -1,11 +1,11 @@
 # TakServer
 
-*Last updated on December 11th 2021*
+*Last updated on June 17th 2024*
 
 Server to handle online TAK games
 
 ## Requirements
-- Java 11
+- Java 21
 - Maven
 - sqlite
 
@@ -19,7 +19,7 @@ cd tak-server
 to run locally run the following commands:
 Get the dependencies
 ```
-mvn dependency:resolve  
+mvn dependency:resolve
 ```
 ```
 mvn compile
@@ -39,18 +39,51 @@ cp properties.xml ./target
 cp message ./target
 ```
 
+Configure `porthttp`, `portws`, `db-path` and `event-subscriber-url` in `./target/properties.xml` to your liking.
+
 Finaly run the app
 ```
-java -jar ./target/takserver-jar-with-dependencies.jar
+cd ./target
+java -jar ./takserver-jar-with-dependencies.jar
 ```
+
+If you want to run the app from `./` via `java -jar ./target/takserver-jar-with-dependencies.jar` then `./properties.xml` will be used and you may need to set `<db-path>./target/</db-path>`.
+
+## Rest API for PNT
+A http server is running on `porthttp`, allowing the creation of tournament seeks.
+
+Details need to be filled in here. Until then, please see [TakServer.java](./src/main/java/tak/TakServer.java) for details.
+
+### HTTP API
+||URL|Body|Return|Comment|
+|-|-|-|-|-|
+|PUT|/api/v1/seeks|[SeekDto](./src/main/java/tak/SeekDto.java) without `id`|[SeekDto](./src/main/java/tak/SeekDto.java)|Creates a seek|
+|GET|/api/v1/seeks|n/a|[List\[SeekDto\]](./src/main/java/tak/SeekDto.java)|Returns list of existing seeks|
+
+## GameUpdateBroadcaster
+The [GameUpdateBroadcaster](./src/main/java/tak/GameUpdateBroadcaster.java) reads an URL from `server-settings.event-subscriber-url` (in `properties.xml`)
+and sends `POST` requests there containing
+```typescript
+{
+	type: "game.created"|"game.ended",
+	game: GameDto
+}
+```
+(see [GameDto](./src/main/java/tak/DTOs/GameDto.java)). If the URL could not be parsed, a `SEVERE` log message will warn about it but the Tak server will still start.
 
 ## Server API
 
-Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on port 9999 for encrypted and port 10000 which will not be encrypted.
+|Environment|Telnet `port`|Websocket `portws`|HTTP `porthttp`|
+|-|-|-|-|
+|Production | 10000 | 9999 | 9998|
+|Beta | 10002 | 10001 | 10003 |
+|Local dev | 10000 | 9999 | 9998 |
+
+Stand alone clients can connect directly to playtak.com or by running locally on localhost via a websocket on `portws` for encrypted communication or telnet on `port` which will not be encrypted.
 <br>
 You can find the playtak UI client github here [playtak-ui](https://github.com/USTakAssociation/playtak-ui)
 
-** You can telnet on port 10000 to test the commands.**
+**You can telnet on port `10000` to test the commands.**
 
 Typical communication is like below
 * Connect to server via a websocket. Server gives welcome message
