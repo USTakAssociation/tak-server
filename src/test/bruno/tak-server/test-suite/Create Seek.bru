@@ -34,12 +34,12 @@ tests {
     expect(res.getStatus()).to.equal(200);
   });
   
-  test("Epect response to be an object", () => {
+  test("Expect response to be an object", () => {
     const body = res.getBody();
     expect(body).to.be.an('object');
   });
   
-  test("Epect response to have an id", () => {
+  test("Expect response to have an id", () => {
     const body = res.getBody();
     expect(body.id).to.exist;
     expect(body.pntId).to.exist;
