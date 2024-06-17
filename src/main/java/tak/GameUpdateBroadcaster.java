@@ -48,8 +48,10 @@ public final class GameUpdateBroadcaster implements Runnable, Subscriber<GameUpd
 	}
 
 	public void run() {
+		stopped.set(false);
 		if (eventSubscriberUrl == null) {
 			logger.severe("failed to start " + GameUpdateBroadcaster.class.getSimpleName() + " because no event-subscriber-url is defined");
+			stopped.set(true);
 			return;
 		}
 
@@ -107,6 +109,11 @@ public final class GameUpdateBroadcaster implements Runnable, Subscriber<GameUpd
 
 	@Override
 	public void onNext(GameUpdate update) {
+		if(stopped.get()) { // prevent queue from filling up when stopped, crashed, or never started properly (due to missing URL);
+			logger.severe("Cannot accept updates while stopped (" + update.type + ")");
+			return;
+		}
+
 		logger.info(update.type);
 		if (logger.isLoggable(Level.FINE)) {
 			logger.fine(update.toString());
