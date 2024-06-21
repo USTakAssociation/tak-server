@@ -8,8 +8,12 @@ WORKDIR /app
 # amvn will rebuild+restart the server when .java files change
 # Logged in users (not guests) will reconnected by the UI within ~12s.
 
-# consider removing clean for slightly faster comilation
-ENTRYPOINT amvn clean package exec:java --watch
+# "amvn clean" is left out for faster iterative compilation.
+# Add it back locally if necessary for your workflow, but
+# rebuilding your docker image should accomplish the same goal.
+# This should be changed also if docker is used for deployment.
+# ENTRYPOINT amvn clean package exec:java --watch
+ENTRYPOINT amvn package exec:java --watch
 
 FROM base as production
 VOLUME /tmp
