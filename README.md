@@ -34,6 +34,13 @@ sh ./create_databases.sh
 ```
 This creates the players and games sqlite dbs
 
+Optionally, you can then use the script `scripts/development/add_user.sh` to add users to the local players database with a password of "password".
+
+```
+./scripts/development/add_user.sh mylocalacct ./players.db
+# See scripts/development/add_user.sh comments for more options.
+```
+
 copy the properties and message to the target
 ```
 cp properties.xml ./target
