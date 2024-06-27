@@ -1,0 +1,33 @@
+meta {
+  name: Auth Login Succeeds
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{url}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "Guest1",
+    "password": "tbd"
+  }
+}
+
+tests {
+  test("success", () => {
+    expect(res.getStatus()).to.equal(200);
+    const body = res.getBody();
+    expect(body).to.be.an('object');
+    expect(body.username).to.exist;
+    expect(body.email).to.exist;
+    expect(body.is_bot).to.exist;
+    expect(body.is_admin).to.exist;
+    expect(body.is_mod).to.exist;
+    expect(body.is_gagged).to.exist;
+    expect(body.is_banned).to.exist;
+  });
+}

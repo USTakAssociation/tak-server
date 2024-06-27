@@ -1,0 +1,23 @@
+meta {
+  name: Auth Register Already Exists
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{url}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "Guest1"
+  }
+}
+
+tests {
+  test("user already exists", () => {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
