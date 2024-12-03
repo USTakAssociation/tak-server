@@ -1,0 +1,22 @@
+meta {
+  name: Auth Register Fails
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{url}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+  }
+}
+
+tests {
+  test("fails on missing username", () => {
+    expect(res.getStatus()).to.equal(400);
+  });
+}

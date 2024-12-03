@@ -1,0 +1,23 @@
+meta {
+  name: Auth Login Bad Request
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{url}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "TestPlayer1"
+  }
+}
+
+tests {
+  test("fails on missing password", () => {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
