@@ -5,10 +5,13 @@
  */
 package tak;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import static tak.Game.DEFAULT_SIZE;
+
+import tak.DTOs.SeekDto;
 import tak.utils.ConcurrentHashSet;
 import java.util.concurrent.locks.*;
 
@@ -17,9 +20,12 @@ import java.util.concurrent.locks.*;
  * @author chaitu
  */
 public class Seek {
+	public static enum COLOR {WHITE, BLACK, ANY};
 	Client client;
 	int boardSize;
 	int no;
+	/** The PNT GameId this Seek is for. Use `null` if not related to any PNT Game. */
+	final Integer pntId;
 	int time;//time in seconds for each side
 	int incr;//increment in seconds
 	int komi;
@@ -30,19 +36,29 @@ public class Seek {
 	int triggerMove;
 	int timeAmount;
 	String opponent;
-	enum COLOR {WHITE, BLACK, ANY};
 	COLOR color;
-	public static Lock seekStuffLock=new ReentrantLock();
+
+	public static Lock seekStuffLock = new ReentrantLock(); // this locks out all other threads
 	
 	static AtomicInteger seekNo = new AtomicInteger(0);
 	
 	static Map<Integer, Seek> seeks = new ConcurrentHashMap<>();
 	static ConcurrentHashSet<Client> seekListeners = new ConcurrentHashSet<>();
 	
-	static Seek newSeek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
+	/** Creates a new seek with the same settings as the given seek, but with a new `no` */
+	public static Seek newSeek(Client client, SeekDto seek) {
+		return newSeek(client,
+				seek.boardSize, seek.timeContingent, seek.timeIncrement, seek.color, seek.komiInt(), seek.pieces,
+				seek.capstones, seek.unratedInt(), seek.tournamentInt(), seek.extraTimeTriggerMove, seek.extraTimeAmount,
+				seek.opponent, seek.pntId);
+	}
+
+	public static Seek newSeek(Client client, int boardSize, int timeContingent, int timeIncrement, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent, Integer pntId) {
+		opponent = opponent == null ? "" : opponent;
+
 		seekStuffLock.lock();
 		try{
-			Seek sk = new Seek(c, b, t, i, clr, komi, pieces, capstones, unrated, tournament, triggerMove, timeAmount, opponent);
+			Seek sk = new Seek(client, boardSize, timeContingent, timeIncrement, clr, komi, pieces, capstones, unrated, tournament, triggerMove, timeAmount, opponent, pntId);
 			System.out.println("Print Seek " + sk.toString());
 			addSeek(sk);
 			return sk;
@@ -52,13 +68,14 @@ public class Seek {
 		}
 	}
 	
-	Seek(Client c, int b, int t, int i, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent) {
+	Seek(Client client, int boardSize, int timeContingent, int timeIncrement, COLOR clr, int komi, int pieces, int capstones, int unrated, int tournament, int triggerMove, int timeAmount, String opponent, Integer pntId) {
 		seekStuffLock.lock();
 		try{
-			client = c;
+			this.client = client;
 			no = seekNo.incrementAndGet();
-			time = t;
-			incr = i;
+			this.pntId = pntId;
+			time = timeContingent;
+			incr = timeIncrement;
 			color = clr;
 			this.komi = Math.min(komi,8);
 			this.pieces = Math.max(Math.min(pieces,80),10);
@@ -69,9 +86,9 @@ public class Seek {
 			this.timeAmount = timeAmount;
 			this.opponent = opponent;
 
-			if (b < 3 || b > 8)
-				b = DEFAULT_SIZE;
-			boardSize = b;
+			if (boardSize < 3 || boardSize > 8)
+				boardSize = DEFAULT_SIZE;
+			this.boardSize = boardSize;
 		}
 		finally{
 			seekStuffLock.unlock();
@@ -93,6 +110,8 @@ public class Seek {
 	static void addSeek(Seek sk) {
 		seekStuffLock.lock();
 		try{
+			sk.client.removeSeeks();
+			sk.client.seek = sk;
 			Seek.seeks.put(sk.no, sk);
 			updateListeners("new " + sk.toString());
 		}
@@ -107,6 +126,42 @@ public class Seek {
 			for (Integer no : Seek.seeks.keySet()) {
 				c.send("Seek new "+Seek.seeks.get(no));
 			}
+		}
+		finally{
+			seekStuffLock.unlock();
+		}
+	}
+		
+	public static List<SeekDto> getList() {
+		seekStuffLock.lock();
+		try{
+			return Seek.seeks.values().stream().map(s -> s.toDto()).toList();
+		}
+		finally{
+			seekStuffLock.unlock();
+		}
+	}
+
+	public SeekDto toDto() {
+		seekStuffLock.lock();
+		try{
+			return SeekDto.builder()
+				.id(no)
+				.pntId(pntId)
+				.creator(client.player.getName())
+				.opponent(opponent == "" ? null : opponent)
+				.color(color)
+				.komi(komi / 2.f)
+				.boardSize(boardSize)
+				.capstones(capstones)
+				.pieces(pieces)
+				.unrated(unrated > 0)
+				.tournament(tournament > 0)
+				.timeContingent(time)
+				.timeIncrement(incr)
+				.extraTimeAmount(timeAmount)
+				.extraTimeTriggerMove(triggerMove)
+				.build();
 		}
 		finally{
 			seekStuffLock.unlock();
@@ -145,6 +200,7 @@ public class Seek {
 			seekStuffLock.unlock();
 		}
 	}
+
 	@Override
 	public String toString() {
 		seekStuffLock.lock();
@@ -154,8 +210,24 @@ public class Seek {
 				clr = "W";
 			else if(color == COLOR.BLACK)
 				clr = "B";
-			
-			return (no+" "+client.player.getName()+" " + boardSize + " " + time + " " + incr + " " + clr + " " + komi + " " + pieces + " " + capstones + " " + unrated + " " + tournament + " " + triggerMove + " " + timeAmount + " " + opponent);
+			String playerName = client.player.getName();
+
+			return String.join(" ", new String[]{
+					Integer.toString(no),
+					playerName,
+					Integer.toString(boardSize),
+					Integer.toString(time),
+					Integer.toString(incr),
+					clr,
+					Integer.toString(komi),
+					Integer.toString(pieces),
+					Integer.toString(capstones),
+					Integer.toString(unrated),
+					Integer.toString(tournament),
+					Integer.toString(triggerMove),
+					Integer.toString(timeAmount),
+					opponent
+			});
 		}
 		finally{
 			seekStuffLock.unlock();
