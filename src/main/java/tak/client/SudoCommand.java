@@ -13,11 +13,13 @@ public abstract class SudoCommand extends LoggedInCommand {
 
 	@Override
 	public boolean validate(String command) {
-		if(!client.player.isMod() && !client.player.isAdmin()) {
+		boolean superOk = super.validate(command);
+
+		if(superOk && !client.player.isMod() && !client.player.isAdmin()) {
 			return false;
 		}
 
-		return super.validate(command);
+		return superOk;
 	}
 }
 

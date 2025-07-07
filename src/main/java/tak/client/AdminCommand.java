@@ -7,11 +7,13 @@ public abstract class AdminCommand extends SudoCommand {
 
 	@Override
 	public boolean validate(String command) {
-		if(!client.player.isAdmin()) {
+		boolean superOk = super.validate(command);
+
+		if(superOk && !client.player.isAdmin()) {
 			client.sendSudoReply("command not found");
 			return false;
 		}
 		
-		return super.validate(command);
+		return superOk;
 	}
 }

@@ -7,9 +7,10 @@ public abstract class InGameCommand extends LoggedInCommand {
 
 	@Override
 	public boolean validate(String command) {
-		if (client.player.getGame() == null) {
+		boolean superOk = super.validate(command);
+		if (superOk && client.player.getGame() == null) {
 			return false;
 		}
-		return super.validate(command);
+		return superOk;
 	}
 }
