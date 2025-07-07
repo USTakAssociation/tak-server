@@ -19,6 +19,6 @@ public abstract class ClientCommand {
 	}
 
 	public boolean validate(String command) {
-		return regexPattern.matcher(command).matches();
+		return regexPattern.matcher(command).find();
 	}
 }

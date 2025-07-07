@@ -3,13 +3,46 @@ import re
 
 WS_URL="ws://localhost:9999"
 
-# Basic logged-out tests that don't require any login or tracking state
 
 def new_conn():
     ws = w.create_connection(WS_URL)
     assert ws.recv() == b"Welcome!\n"
     assert ws.recv() == b"Login or Register\n"
     return ws
+
+def filtered_recv(ws, allowlist=None):
+    filter_prefix = [
+        "Online",
+        "Seek",
+        "GameList",
+    ]
+
+    if allowlist:
+        filter_prefix = list(set(filter_prefix) - set(allowlist))
+
+    while True:
+        message = ws.recv()
+        if any(message.decode("utf-8").startswith(prefix) for prefix in filter_prefix):
+            continue
+        return message
+
+
+def logged_in_guest_conn():
+    ws = new_conn()
+    ws.send("Login Guest")
+
+    match = re.match(r"Welcome (Guest[0-9]+)!", filtered_recv(ws).decode("utf-8"))
+    assert match
+
+    return ws, match.group(1)
+
+
+def create_seek_v1(ws):
+    ws.send("Seek 5 15 10 W")
+    r = filtered_recv(ws, ["Seek"])
+    match = re.match(r"^Seek new ([0-9]+)", r.decode("utf-8"))
+    assert match
+    return match.group(1)
 
 
 def test_server_up():
@@ -21,7 +54,7 @@ def test_ping():
     ws = new_conn()
 
     ws.send("PING")
-    assert ws.recv() == b"OK\n"
+    assert filtered_recv(ws) == b"OK\n"
     
     ws.close()
 
@@ -30,60 +63,137 @@ def test_client():
     ws = new_conn()
 
     ws.send("Client anything-1234")
-    assert ws.recv() == b"OK\n"
+    assert filtered_recv(ws) == b"OK\n"
 
     ws.send("Client TreffnonX-08.09.16")
-    assert ws.recv() == b"Shout <Server> Your Playtak client is unfortunately no longer compatible. Please go to https://www.playtak.com in order to play.\n"
+    assert filtered_recv(ws) == b"Shout <Server> Your Playtak client is unfortunately no longer compatible. Please go to https://www.playtak.com in order to play.\n"
 
     ws.close()
+
+
+def test_two_guests_create_play_game():
+    guest1conn, guest1name = logged_in_guest_conn()
+    guest2conn, guest2name = logged_in_guest_conn()
+
+    seeknum = create_seek_v1(guest1conn)
+    guest2conn.send(f"Accept {seeknum}")
+
+    g2resp = filtered_recv(guest2conn)
+    g2match = re.match(f"Game Start ([0-9]+) 5 {guest1name} vs {guest2name} black 15 0 21 1 0 0\n", g2resp.decode("utf-8"))
+    assert g2match
+
+    g1resp = filtered_recv(guest1conn)
+    g1match = re.match(f"Game Start ([0-9]+) 5 {guest1name} vs {guest2name} white 15 0 21 1 0 0\n", g1resp.decode("utf-8"))
+    assert g1match
+
+    g2gamenum = g2match.group(1)
+    g1gamenum = g1match.group(1)
+
+    assert g2gamenum == g1gamenum
+
+    timerex = f"Game#{g1gamenum} Time [0-9]+ [0-9]+\n"
+
+    guest1conn.send(f"Game#{g1gamenum} P A1")
+
+    g1resp = filtered_recv(guest1conn)
+    assert re.match(timerex, g1resp.decode("utf-8"))
+
+    g2resp = filtered_recv(guest2conn)
+    assert re.match(timerex, g2resp.decode("utf-8"))
+
+    g2resp = filtered_recv(guest2conn)
+    assert g2resp.decode("utf-8") == f"Game#{g1gamenum} P A1\n"
+    
+    g1resp = filtered_recv(guest1conn)
+    assert g1resp == b"OK\n"
+
+    guest2conn.send(f"Game#{g1gamenum} P A2")
+
+    g2resp = filtered_recv(guest2conn)
+    assert re.match(timerex, g2resp.decode("utf-8"))
+
+    g1resp = filtered_recv(guest1conn)
+    assert re.match(timerex, g1resp.decode("utf-8"))
+
+    g1resp = filtered_recv(guest1conn)
+    assert g1resp.decode("utf-8") == f"Game#{g1gamenum} P A2\n"
+    
+    g2resp = filtered_recv(guest2conn)
+    assert g2resp == b"OK\n"
+
+
+    guest1conn.send(f"Game#{g1gamenum} M A2 A1 1")
+
+    g1resp = filtered_recv(guest1conn)
+    assert re.match(timerex, g1resp.decode("utf-8"))
+
+    g2resp = filtered_recv(guest2conn)
+    assert re.match(timerex, g2resp.decode("utf-8"))
+
+    g2resp = filtered_recv(guest2conn)
+    assert g2resp.decode("utf-8") == f"Game#{g1gamenum} M A2 A1 1\n"
+    
+    g1resp = filtered_recv(guest1conn)
+    assert g1resp == b"OK\n"
+
+
+    guest2conn.send(f"Game#{g1gamenum} Resign")
+    g2resp = filtered_recv(guest2conn)
+    assert g2resp.decode("utf-8") == f"Game#{g1gamenum} Over 1-0\n"
+
+    g1resp = filtered_recv(guest1conn)
+    assert g1resp.decode("utf-8") == f"Game#{g1gamenum} Over 1-0\n"
+
+    guest1conn.close()
+    guest2conn.close()
 
 
 def test_login_nonexistant_player():
     ws = new_conn()
     ws.send("Login player1 fakepass")
-    assert ws.recv() == b"Authentication failure\n"
+    assert filtered_recv(ws) == b"Authentication failure\n"
     ws.close()
 
 
 def test_login_guest():
     ws = new_conn()
     ws.send("Login Guest")
-    assert re.match(r"Welcome Guest[0-9]+!", ws.recv().decode("utf-8"))
+    assert re.match(r"Welcome Guest[0-9]+!", filtered_recv(ws).decode("utf-8"))
     ws.close()
 
 
 def test_accept_seek_not_logged_in():
     ws = new_conn()
     ws.send("Accept 1234")
-    assert ws.recv() == b"NOK\n"
+    assert filtered_recv(ws) == b"NOK\n"
     ws.close()
 
 
 def test_change_password_not_logged_in():
     ws = new_conn()
     ws.send("ChangePassword old new")
-    assert ws.recv() == b"NOK\n"
+    assert filtered_recv(ws) == b"NOK\n"
     ws.close()
 
 
 def test_draw_not_logged_in():
     ws = new_conn()
     ws.send("Game#1234 OfferDraw")
-    assert ws.recv() == b"NOK\n"
+    assert filtered_recv(ws) == b"NOK\n"
     ws.close()
 
 
 def test_game_list_not_logged_in():
     ws = new_conn()
     ws.send("GameList")
-    assert ws.recv() == b"NOK\n"
+    assert filtered_recv(ws) == b"NOK\n"
     ws.close()
 
 
 def test_full_game_state_not_logged_in():
     ws = new_conn()
     ws.send("Game#1234 Show")
-    assert ws.recv() == b"NOK\n"
+    assert filtered_recv(ws) == b"NOK\n"
     ws.close()
 
 
