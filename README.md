@@ -1,5 +1,8 @@
 # TakServer
 
+This repo is not longer active and has been moved here
+https://github.com/USTakAssociation/playtak-api
+
 *Last updated on June 17th 2024*
 
 Server to handle online TAK games
